@@ -37,4 +37,10 @@ class VeyraStatsTest {
         assertEquals(3, VeyraStats.streakFromDailyCompletion(listOf(true, true, true, false, true)))
         assertEquals(0, VeyraStats.streakFromDailyCompletion(listOf(false, true)))
     }
+
+    @Test fun bestStreakFindsLongestRun() {
+        assertEquals(4, VeyraStats.bestStreakFromDailyCompletion(listOf(true, true, false, true, true, true, true, false)))
+        assertEquals(0, VeyraStats.bestStreakFromDailyCompletion(listOf(false, false)))
+        assertEquals(3, VeyraStats.bestStreakFromDailyCompletion(listOf(true, true, true)))
+    }
 }
