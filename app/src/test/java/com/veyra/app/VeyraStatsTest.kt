@@ -8,6 +8,23 @@ class VeyraStatsTest {
         assertEquals(1, VeyraStats.level(0))
         assertEquals(3, VeyraStats.level(235))
         assertEquals(35, VeyraStats.levelProgress(235))
+        assertEquals(65, VeyraStats.xpToNextLevel(235))
+    }
+
+    @Test fun levelBoundariesAreCorrect() {
+        assertEquals(1, VeyraStats.level(99))
+        assertEquals(2, VeyraStats.level(100))
+        assertEquals(100, VeyraStats.levelProgress(100))
+        assertEquals(100, VeyraStats.xpToNextLevel(99))
+        assertEquals(100, VeyraStats.xpToNextLevel(200))
+    }
+
+    @Test fun levelTitlesScaleWithProgression() {
+        assertEquals("Explorer", VeyraStats.levelTitle(1))
+        assertEquals("Pathfinder", VeyraStats.levelTitle(3))
+        assertEquals("Star Forger", VeyraStats.levelTitle(5))
+        assertEquals("Cosmic Architect", VeyraStats.levelTitle(10))
+        assertEquals("Universe Builder", VeyraStats.levelTitle(20))
     }
 
     @Test fun completionRateIsBounded() {
