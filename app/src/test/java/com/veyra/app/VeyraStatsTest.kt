@@ -14,8 +14,8 @@ class VeyraStatsTest {
     @Test fun levelBoundariesAreCorrect() {
         assertEquals(1, VeyraStats.level(99))
         assertEquals(2, VeyraStats.level(100))
-        assertEquals(100, VeyraStats.levelProgress(100))
-        assertEquals(100, VeyraStats.xpToNextLevel(99))
+        assertEquals(0, VeyraStats.levelProgress(100))
+        assertEquals(1, VeyraStats.xpToNextLevel(99))
         assertEquals(100, VeyraStats.xpToNextLevel(200))
     }
 
