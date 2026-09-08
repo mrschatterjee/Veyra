@@ -1,8 +1,21 @@
 package com.veyra.app
 
 object VeyraStats {
-    fun level(xp: Int): Int = 1 + xp.coerceAtLeast(0) / 100
-    fun levelProgress(xp: Int): Int = xp.coerceAtLeast(0) % 100
+    private const val XP_PER_LEVEL = 100
+
+    fun level(xp: Int): Int = 1 + xp.coerceAtLeast(0) / XP_PER_LEVEL
+
+    fun levelProgress(xp: Int): Int = xp.coerceAtLeast(0) % XP_PER_LEVEL
+
+    fun xpToNextLevel(xp: Int): Int = XP_PER_LEVEL - levelProgress(xp)
+
+    fun levelTitle(level: Int): String = when {
+        level >= 20 -> "Universe Builder"
+        level >= 10 -> "Cosmic Architect"
+        level >= 5 -> "Star Forger"
+        level >= 3 -> "Pathfinder"
+        else -> "Explorer"
+    }
 
     fun completionRate(completed: Int, possible: Int): Int {
         if (possible <= 0) return 0
