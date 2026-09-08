@@ -46,7 +46,7 @@ class VeyraHomeView(private val activity: MainActivity) : View(activity) {
         when(tab){0->today(c,w);1->habits(c,w);2->goals(c,w);3->journal(c,w);4->stats(c,w)}; navigation(c,w,h)
     }
     private fun today(c:Canvas,w:Float){
-        val done=store.completionCount(1,habits.map{it.id}); val streak=store.streak(habits.map{it.id})
+        val done=store.completedCount(1,habits.map{it.id}); val streak=store.streak(habits.map{it.id})
         text(c,"Good morning.",24f,110f,30f,255,true); text(c,"One small action at a time.",24f,135f,14f,180)
         glass(c,20f,157f,w-20f,270f); text(c,"TODAY",38f,187f,11f,170,true); text(c,"Your universe is",38f,219f,17f); text(c,"$done habits complete",38f,246f,25f,255,true)
         text(c,"Mood",w-106f,187f,11f,170); val mood=store.mood(); listOf("☹","😐","🙂","😄").forEachIndexed{i,f->text(c,f,w-116f+i*25f,218f,18f,if(mood==i)255 else 125)}
