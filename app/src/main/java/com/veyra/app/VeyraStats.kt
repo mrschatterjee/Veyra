@@ -30,4 +30,18 @@ object VeyraStats {
         }
         return streak
     }
+
+    fun bestStreakFromDailyCompletion(completedDays: List<Boolean>): Int {
+        var best = 0
+        var current = 0
+        for (completed in completedDays) {
+            if (completed) {
+                current++
+                best = maxOf(best, current)
+            } else {
+                current = 0
+            }
+        }
+        return best
+    }
 }
