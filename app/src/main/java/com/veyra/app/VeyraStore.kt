@@ -16,7 +16,7 @@ class VeyraStore(context: Context) {
     fun habits(): List<HabitRecord> { val raw=prefs.getString("habits",null);if(raw==null||raw=="[]"){val defaults=listOf(HabitRecord(1,"Drink water"),HabitRecord(2,"Study 20 min"),HabitRecord(3,"Move 20 min"));if(raw==null)setHabits(defaults);return if(raw=="[]") emptyList() else defaults};val json=JSONArray(raw);return List(json.length()){i->val o=json.getJSONObject(i);HabitRecord(o.getLong("id"),o.getString("name"))} }
     fun setHabits(items:List<HabitRecord>){val json=JSONArray();items.forEach{json.put(JSONObject().put("id",it.id).put("name",it.name))};prefs.edit().putString("habits",json.toString()).apply()}
     fun renameHabit(id:Long,name:String){val cleaned=name.trim();if(cleaned.isBlank())return;setHabits(habits().map{if(it.id==id)HabitRecord(id,cleaned)else it})}
-    fun removeHabit(id:Long){setHabits(habits().filterNot{it.id==id})}
+    fun removeHabit(id:Long){setHabits(habits().filterNot{it.id==id});val e=prefs.edit();val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);val c=Calendar.getInstance();repeat(3650){e.remove("done_${f.format(c.time)}_$id");c.add(Calendar.DAY_OF_YEAR,-1)};e.apply()}
     fun isCompleted(id:Long,date:String=today()):Boolean=prefs.getBoolean("done_${date}_$id",false)
     fun setCompleted(id:Long,done:Boolean,date:String=today())=prefs.edit().putBoolean("done_${date}_$id",done).apply()
     fun completionDates(id:Long,days:Int):List<String>{val r=mutableListOf<String>();val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);val c=Calendar.getInstance();repeat(days.coerceAtLeast(0)){r+=f.format(c.time);c.add(Calendar.DAY_OF_YEAR,-1)};return r.filter{isCompleted(id,it)}}
