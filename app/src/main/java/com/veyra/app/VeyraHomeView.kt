@@ -1,0 +1,87 @@
+package com.veyra.app
+
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Shader
+import android.graphics.Typeface
+import android.view.MotionEvent
+import android.view.View
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.Random
+
+/** Main interactive Veyra surface backed by VeyraStore. */
+class VeyraHomeView(private val activity: MainActivity) : View(activity) {
+    private val store = VeyraStore(activity)
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val tabs = listOf("Today", "Habits", "Goals", "Journal", "Stats")
+    private var tab = 0
+    private var habits = store.habits().toMutableList()
+    private val stars = List(90) { Random(it * 41L + 7L).nextFloat() to Random(it * 73L + 11L).nextFloat() }
+    private val dateFormat = SimpleDateFormat("EEEE, d MMM", Locale.getDefault())
+
+    init { isFocusable = true }
+
+    private fun text(c: Canvas, s: String, x: Float, y: Float, size: Float, alpha: Int = 255, bold: Boolean = false) {
+        paint.shader = null; paint.style = Paint.Style.FILL; paint.color = Color.argb(alpha, 255, 255, 255)
+        paint.textSize = size; paint.typeface = Typeface.create("sans", if (bold) Typeface.BOLD else Typeface.NORMAL); c.drawText(s, x, y, paint)
+    }
+    private fun glass(c: Canvas, l: Float, t: Float, r: Float, b: Float) {
+        paint.shader = null; paint.style = Paint.Style.FILL; paint.color = Color.argb(58, 255, 255, 255); c.drawRoundRect(l,t,r,b,24f,24f,paint)
+        paint.style = Paint.Style.STROKE; paint.strokeWidth = 1f; paint.color = Color.argb(75,255,255,255); c.drawRoundRect(l,t,r,b,24f,24f,paint); paint.style = Paint.Style.FILL
+    }
+    private fun background(c: Canvas) {
+        val w=width.toFloat(); val h=height.toFloat(); paint.shader=LinearGradient(0f,0f,w,h,Color.rgb(9,5,29),Color.rgb(65,31,122),Shader.TileMode.CLAMP); c.drawRect(0f,0f,w,h,paint); paint.shader=null
+        paint.color=Color.argb(100,185,145,255); stars.forEach{(x,y)->c.drawCircle(x*w,y*(h-82f),if(x>0.7f)2f else 1.1f,paint)}
+        paint.color=Color.argb(42,190,150,255); paint.style=Paint.Style.STROKE; paint.strokeWidth=2f
+        val p=Path(); p.moveTo(-20f,h*.28f); p.cubicTo(w*.25f,h*.16f,w*.65f,h*.39f,w+20f,h*.24f); c.drawPath(p,paint); p.reset(); p.moveTo(-20f,h*.62f); p.cubicTo(w*.28f,h*.49f,w*.65f,h*.79f,w+20f,h*.60f); c.drawPath(p,paint); paint.style=Paint.Style.FILL
+    }
+    override fun onDraw(c: Canvas) {
+        background(c); val w=width.toFloat(); val h=height.toFloat()
+        text(c,"VEYRA",24f,42f,22f,255,true); text(c,"Build your universe.",24f,65f,13f,185); text(c,dateFormat.format(Date()),w-150f,42f,11f,180)
+        when(tab){0->today(c,w);1->habits(c,w);2->goals(c,w);3->journal(c,w);4->stats(c,w)}; navigation(c,w,h)
+    }
+    private fun today(c:Canvas,w:Float){
+        val done=store.completionCount(1,habits.map{it.id}); val streak=store.streak(habits.map{it.id})
+        text(c,"Good morning.",24f,110f,30f,255,true); text(c,"One small action at a time.",24f,135f,14f,180)
+        glass(c,20f,157f,w-20f,270f); text(c,"TODAY",38f,187f,11f,170,true); text(c,"Your universe is",38f,219f,17f); text(c,"$done habits complete",38f,246f,25f,255,true)
+        text(c,"Mood",w-106f,187f,11f,170); val mood=store.mood(); listOf("☹","😐","🙂","😄").forEachIndexed{i,f->text(c,f,w-116f+i*25f,218f,18f,if(mood==i)255 else 125)}
+        text(c,"Focus",24f,305f,20f,255,true); glass(c,20f,322f,w-20f,420f); text(c,store.goal(),38f,353f,16f); text(c,"${store.xp()} XP  •  $streak day streak",38f,384f,13f,180)
+        text(c,"Quick actions",24f,457f,20f,255,true); action(c,20f,474f,w/2f-8f,"+ Habit"); action(c,w/2f+8f,w-20f,474f,"Write journal")
+    }
+    private fun action(c:Canvas,l:Float,r:Float,t:Float,label:String){glass(c,l,t,r,t+62f);text(c,label,l+18f,t+38f,15f,255,true)}
+    private fun habits(c:Canvas,w:Float){
+        text(c,"Habits",24f,110f,30f,255,true); text(c,"Consistency compounds.",24f,135f,14f,180)
+        habits.take(5).forEachIndexed{ i,h-> val top=160f+i*76f; glass(c,20f,top,w-20f,top+60f); val done=store.isCompleted(h.id); paint.color=if(done)Color.rgb(151,112,255)else Color.argb(22,255,255,255);c.drawCircle(52f,top+30f,14f,paint);if(done)text(c,"✓",45f,top+36f,17f);text(c,h.name,80f,top+27f,16f);text(c,if(done)"Complete"else"Tap to complete",80f,top+47f,11f,170)}
+        action(c,20f,w-20f,160f+minOf(habits.size,5)*76f,"+ Add a habit")
+    }
+    private fun goals(c:Canvas,w:Float){
+        text(c,"Goals",24f,110f,30f,255,true);text(c,"Turn intentions into direction.",24f,135f,14f,180);glass(c,20f,160f,w-20f,300f);text(c,"CURRENT GOAL",38f,190f,11f,170,true);text(c,store.goal(),38f,222f,20f,255,true);text(c,"Tap below to change your goal.",38f,252f,13f,170);action(c,20f,w-20f,325f,"Edit goal")
+    }
+    private fun journal(c:Canvas,w:Float){
+        text(c,"Journal",24f,110f,30f,255,true);text(c,"A quiet place for your thoughts.",24f,135f,14f,180);glass(c,20f,160f,w-20f,405f);text(c,"TODAY",38f,190f,11f,170,true);val body=store.journal();if(body.isBlank()){text(c,"Nothing written yet.",38f,232f,17f,180);text(c,"Capture something from today.",38f,258f,13f,150)}else{var y=228f;body.split("\n").take(7).forEach{line->text(c,line.take(52),38f,y,14f,220);y+=23f}};action(c,20f,w-20f,425f,"+ Write entry")
+    }
+    private fun stats(c:Canvas,w:Float){
+        text(c,"Stats",24f,110f,30f,255,true);text(c,"See the pattern, not just the day.",24f,135f,14f,180);val ids=habits.map{it.id};glass(c,20f,160f,w-20f,440f);val xp=store.xp();text(c,"LEVEL",38f,190f,11f,170,true);text(c,"${VeyraStats.level(xp)}",38f,232f,42f,255,true);text(c,"${VeyraStats.levelProgress(xp)}/100 XP",105f,227f,14f,180)
+        val periods=listOf(7,30,90,365);periods.forEachIndexed{i,d->val y=270f+i*38f;text(c,"${if(d==365)"1Y" else "${d}D"}",38f,y,12f,180,true);text(c,"${store.completedCount(d,ids)} completions",100f,y,14f);}
+        text(c,"Current streak",38f,430f,12f,180,true);text(c,"${store.streak(ids)} days",155f,430f,15f,255,true)
+    }
+    private fun navigation(c:Canvas,w:Float,h:Float){val top=h-78f;glass(c,12f,top,w-12f,h-8f);val step=w/tabs.size;tabs.forEachIndexed{i,s->paint.textSize=10f;val tw=paint.measureText(s);text(c,s,step*i+step/2f-tw/2f,top+44f,10f,if(i==tab)255 else 135,i==tab)}}
+    override fun onTouchEvent(e:MotionEvent):Boolean{
+        if(e.action!=MotionEvent.ACTION_UP)return true;val x=e.x;val y=e.y;val w=width.toFloat();val h=height.toFloat()
+        if(y>h-90f){tab=(x/(w/tabs.size)).toInt().coerceIn(0,4);invalidate();return true}
+        when(tab){
+            0->{if(y in 157f..270f&&x>w-145f){store.setMood((store.mood()+1)%4);invalidate()}else if(y in 474f..536f){if(x<w/2f)addHabit()else writeJournal()}}
+            1->{val max=minOf(habits.size,5);val bottom=160f+max*76f;if(y>=160f&&y<bottom){val i=((y-160f)/76f).toInt();if(i in 0 until max){val id=habits[i].id;val done=!store.isCompleted(id);store.setCompleted(id,done);if(done)store.setXp(store.xp()+10)else store.setXp(store.xp()-10);invalidate()}}else if(y>=bottom)addHabit()}
+            2->if(y in 325f..387f)editGoal()
+            3->if(y in 425f..500f)writeJournal()
+        };return true
+    }
+    private fun addHabit(){activity.textInput("Add a habit","e.g. Read 20 minutes"){name->val next=(habits.maxOfOrNull{it.id}?:0L)+1;habits.add(VeyraStore.HabitRecord(next,name));store.setHabits(habits);invalidate()}}
+    private fun editGoal(){activity.textInput("Edit goal",store.goal()){store.setGoal(it);invalidate()}}
+    private fun writeJournal(){activity.textInput("Today's journal","What happened today?"){store.setJournal(it);invalidate()}}
+}
