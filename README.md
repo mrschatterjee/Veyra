@@ -4,18 +4,24 @@ Veyra is a personal life-tracking Android app built around the idea: **Build you
 
 ## Current build
 
-This repository now contains the first functional Android implementation of the Veyra experience:
+The repository contains a functional native Android implementation with:
 
-- Cosmic / glass-inspired interface
-- Veyra opening identity and dashboard
+- Cosmic / glass-inspired royal-purple interface
+- Veyra opening identity sequence
 - Today dashboard
-- Habit creation and completion
-- XP and streak tracking
-- Goal editing with progress display
+- Habit creation, completion, rename and deletion
+- XP, levels, progression titles and streak tracking
+- Achievement unlocking
+- Goal editing
 - Mood tracking
-- Daily journal entry
-- Basic statistics / level view
+- Daily journal entries
+- 7D / 30D / 90D / 1Y completion statistics
 - Local persistence with Android SharedPreferences
+- Daily reminders with notification permission handling
+- Reminder restoration after device reboot
+- JSON backup and restore
+- Reset and local data-management controls
+- Automated unit tests for progression and core calculations
 - Portrait Android experience, min SDK 26
 
 ## Open in Android Studio
@@ -27,6 +33,6 @@ This repository now contains the first functional Android implementation of the 
 
 Package: `com.veyra.app`
 
-## Roadmap
+## Development status
 
-The remaining production work includes richer scheduling/reminders, robust habit history, 7D/30D/90D/1Y analytics, backup/restore, profile/settings, polished opening animation, accessibility, automated tests, and release signing.
+The app is in active production hardening. The remaining work is focused on deeper habit history/analytics, accessibility and visual polish, release configuration, and final device testing. Release signing is intentionally not committed to the repository.
