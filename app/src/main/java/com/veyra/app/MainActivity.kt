@@ -78,31 +78,14 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
             .apply()
     }
 
-    private fun text(
-        canvas: Canvas,
-        value: String,
-        x: Float,
-        y: Float,
-        size: Float,
-        alpha: Int = 255,
-        bold: Boolean = false
-    ) {
+    private fun text(canvas: Canvas, value: String, x: Float, y: Float, size: Float, alpha: Int = 255, bold: Boolean = false) {
         paint.color = Color.argb(alpha, 255, 255, 255)
         paint.textSize = size
         paint.typeface = Typeface.create("sans", if (bold) Typeface.BOLD else Typeface.NORMAL)
         canvas.drawText(value, x, y, paint)
     }
 
-    private fun round(
-        canvas: Canvas,
-        left: Float,
-        top: Float,
-        right: Float,
-        bottom: Float,
-        radius: Float,
-        fill: Int,
-        stroke: Int = Color.TRANSPARENT
-    ) {
+    private fun round(canvas: Canvas, left: Float, top: Float, right: Float, bottom: Float, radius: Float, fill: Int, stroke: Int = Color.TRANSPARENT) {
         paint.color = fill
         paint.style = Paint.Style.FILL
         canvas.drawRoundRect(left, top, right, bottom, radius, radius, paint)
@@ -119,22 +102,12 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
         super.onDraw(canvas)
         val width = width.toFloat()
         val height = height.toFloat()
-
-        val gradient = LinearGradient(
-            0f, 0f, width, height,
-            Color.rgb(10, 6, 30),
-            Color.rgb(61, 31, 112),
-            Shader.TileMode.CLAMP
-        )
+        val gradient = LinearGradient(0f, 0f, width, height, Color.rgb(10, 6, 30), Color.rgb(61, 31, 112), Shader.TileMode.CLAMP)
         paint.shader = gradient
         canvas.drawRect(0f, 0f, width, height, paint)
         paint.shader = null
-
         paint.color = Color.argb(90, 170, 130, 255)
-        for ((sx, sy) in stars) {
-            canvas.drawCircle(sx * width, sy * (height - 90f), if ((sx * 10f).toInt() % 3 == 0) 2f else 1f, paint)
-        }
-
+        for ((sx, sy) in stars) canvas.drawCircle(sx * width, sy * (height - 90f), if ((sx * 10f).toInt() % 3 == 0) 2f else 1f, paint)
         paint.color = Color.argb(55, 185, 130, 255)
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 2f
@@ -147,7 +120,6 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
         path.cubicTo(width * 0.3f, height * 0.5f, width * 0.65f, height * 0.78f, width + 20f, height * 0.61f)
         canvas.drawPath(path, paint)
         paint.style = Paint.Style.FILL
-
         drawHeader(canvas, width)
         when (tab) {
             0 -> drawToday(canvas, width)
@@ -172,22 +144,17 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
     private fun drawToday(canvas: Canvas, width: Float) {
         text(canvas, "Good morning.", 24f, 112f, 30f, bold = true)
         text(canvas, "One small action at a time.", 24f, 137f, 14f, 180)
-
         glass(canvas, 20f, 158f, width - 20f, 265f)
         text(canvas, "TODAY", 38f, 188f, 11f, 170, true)
         text(canvas, "Your universe is", 38f, 220f, 17f)
         text(canvas, "${completed.count { it }} habits complete", 38f, 244f, 25f, bold = true)
         text(canvas, "Mood", width - 100f, 188f, 11f, 170)
         val faces = listOf("☹", "😐", "🙂", "😄")
-        faces.forEachIndexed { index, face ->
-            text(canvas, face, width - 112f + index * 25f, 218f, 18f, if (mood == index) 255 else 130)
-        }
-
+        faces.forEachIndexed { index, face -> text(canvas, face, width - 112f + index * 25f, 218f, 18f, if (mood == index) 255 else 130) }
         text(canvas, "Focus", 24f, 301f, 20f, bold = true)
         glass(canvas, 20f, 318f, width - 20f, 418f)
         text(canvas, goal, 38f, 350f, 16f)
         text(canvas, "${xp} XP  •  ${streak} day streak", 38f, 381f, 13f, 180)
-
         text(canvas, "Quick actions", 24f, 458f, 20f, bold = true)
         action(canvas, 20f, 475f, width / 2f - 8f, "+ Habit")
         action(canvas, width / 2f + 8f, 475f, width - 20f, "Write journal")
@@ -201,20 +168,15 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
     private fun drawHabits(canvas: Canvas, width: Float) {
         text(canvas, "Habits", 24f, 112f, 30f, bold = true)
         text(canvas, "Consistency compounds.", 24f, 137f, 14f, 180)
-
         habits.forEachIndexed { index, label ->
             val top = 165f + index * 78f
             glass(canvas, 20f, top, width - 20f, top + 62f)
             val done = completed.getOrNull(index) == true
-            round(
-                canvas, 38f, top + 17f, 64f, top + 43f, 13f,
-                if (done) Color.rgb(151, 112, 255) else Color.argb(20, 255, 255, 255)
-            )
+            round(canvas, 38f, top + 17f, 64f, top + 43f, 13f, if (done) Color.rgb(151, 112, 255) else Color.argb(20, 255, 255, 255))
             if (done) text(canvas, "✓", 43f, top + 38f, 17f)
             text(canvas, label, 80f, top + 27f, 16f)
             text(canvas, if (done) "Complete" else "Tap to complete", 80f, top + 48f, 11f, 170)
         }
-
         val addTop = 165f + habits.size * 78f
         action(canvas, 20f, addTop, width - 20f, "+ Add a habit")
     }
@@ -241,10 +203,7 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
             text(canvas, "Tap below to capture the day.", 38f, 261f, 13f, 150)
         } else {
             var y = 230f
-            journal.split("\n").take(8).forEach { line ->
-                text(canvas, line.take(48), 38f, y, 14f, 220)
-                y += 22f
-            }
+            journal.split("\n").take(8).forEach { line -> text(canvas, line.take(48), 38f, y, 14f, 220); y += 22f }
         }
         action(canvas, 20f, 430f, width - 20f, "+ Write entry")
     }
@@ -254,10 +213,10 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
         text(canvas, "See the pattern, not just the day.", 24f, 137f, 14f, 180)
         glass(canvas, 20f, 165f, width - 20f, 335f)
         text(canvas, "LEVEL", 38f, 195f, 11f, 170, true)
-        text(canvas, "${1 + xp / 100}", 38f, 235f, 42f, bold = true)
-        text(canvas, "${xp % 100}/100 XP", 100f, 229f, 14f, 180)
+        text(canvas, "${VeyraStats.level(xp)}", 38f, 235f, 42f, bold = true)
+        text(canvas, "${VeyraStats.levelProgress(xp)}/100 XP", 100f, 229f, 14f, 180)
         round(canvas, 100f, 246f, width - 38f, 256f, 5f, Color.argb(45, 255, 255, 255))
-        val progress = (xp % 100) / 100f
+        val progress = VeyraStats.levelProgress(xp) / 100f
         round(canvas, 100f, 246f, 100f + (width - 138f) * progress, 256f, 5f, Color.rgb(167, 139, 250))
         text(canvas, "7D", 38f, 305f, 12f, 180, true)
         text(canvas, "${completed.count { it }} completed", 100f, 305f, 15f)
@@ -280,18 +239,15 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action != MotionEvent.ACTION_UP) return true
-
         val x = event.x
         val y = event.y
         val width = width.toFloat()
         val height = height.toFloat()
-
         if (y > height - 90f) {
             tab = (x / (width / tabs.size.toFloat())).toInt().coerceIn(0, 4)
             invalidate()
             return true
         }
-
         when (tab) {
             0 -> {
                 if (y in 158f..265f && x > width - 145f) {
@@ -304,7 +260,7 @@ private class VeyraView(private val ctx: Context) : View(ctx) {
             }
             1 -> {
                 val habitsBottom = 165f + habits.size * 78f
-                if (y in 165f until habitsBottom) {
+                if (y >= 165f && y < habitsBottom) {
                     val index = ((y - 165f) / 78f).toInt()
                     if (index in habits.indices) {
                         completed[index] = !completed[index]
