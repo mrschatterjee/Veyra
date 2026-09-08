@@ -50,7 +50,7 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setTitle(habit.name).setItems(arrayOf("Rename","Delete")){_,which->if(which==0)renameHabit(habit)else deleteHabit(habit)}.show()
     }
     private fun renameHabit(habit:VeyraStore.HabitRecord){textInput("Rename habit",habit.name){store.renameHabit(habit.id,it);refreshHome()}}
-    private fun deleteHabit(habit:VeyraStore.HabitRecord){AlertDialog.Builder(this).setTitle("Delete habit?").setMessage("Remove \"${habit.name}\" from your habit list? Existing history remains stored.").setNegativeButton("Cancel",null).setPositiveButton("Delete"){_,_->store.removeHabit(habit.id);refreshHome()}.show()}
+    private fun deleteHabit(habit:VeyraStore.HabitRecord){AlertDialog.Builder(this).setTitle("Delete habit?").setMessage("Remove \"${habit.name}\" from your habit list? Its completion history will also be removed.").setNegativeButton("Cancel",null).setPositiveButton("Delete"){_,_->store.removeHabit(habit.id);refreshHome()}.show()}
     private fun refreshHome(){setContentView(VeyraHomeView(this))}
     private fun reminderDialog(){
         val picker=TimePicker(this).apply{setIs24HourView(true);hour=VeyraReminder.hour(this@MainActivity);minute=VeyraReminder.minute(this@MainActivity)}
