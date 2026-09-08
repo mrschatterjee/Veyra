@@ -22,7 +22,9 @@ import android.widget.EditText
 import android.widget.TimePicker
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.text.SimpleDateFormat
 import java.util.Random
+import java.util.Locale
 
 class MainActivity : Activity() {
     private val handler=Handler(Looper.getMainLooper())
@@ -37,8 +39,24 @@ class MainActivity : Activity() {
     override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this))}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){val input=EditText(this).apply{this.hint=hint;setSingleLine(false);minLines=2};AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save"){_,_->input.text.toString().trim().takeIf{it.isNotEmpty()}?.let(onSave)}.show()}
     fun showSettings(){
-        val labels=arrayOf("Daily reminder","Manage habits","Backup data","Restore backup","About Veyra • v1.1","Reset Veyra data")
-        AlertDialog.Builder(this).setTitle("Veyra settings").setItems(labels){_,which->when(which){0->reminderDialog();1->manageHabits();2->createBackupFile();3->openBackupFile();4->showAbout();5->confirmReset()}}.show()
+        val labels=arrayOf("Daily reminder","Manage habits","Habit history","Achievements","Backup data","Restore backup","About Veyra • v1.1","Reset Veyra data")
+        AlertDialog.Builder(this).setTitle("Veyra settings").setItems(labels){_,which->when(which){0->reminderDialog();1->manageHabits();2->showHabitHistory();3->showAchievements();4->createBackupFile();5->openBackupFile();6->showAbout();7->confirmReset()}}.show()
+    }
+    private fun showAchievements(){
+        val items=store.achievements().map{if(it.unlocked)"✓ ${it.title}\n${it.description}" else "○ ${it.title}\n${it.description}"}.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Achievements").setItems(items,null).setPositiveButton("OK",null).show()
+    }
+    private fun showHabitHistory(){
+        val habits=store.habits()
+        if(habits.isEmpty()){AlertDialog.Builder(this).setTitle("Habit history").setMessage("Add a habit first to build completion history.").setPositiveButton("OK",null).show();return}
+        val f=SimpleDateFormat("EEE, d MMM",Locale.getDefault())
+        val lines=mutableListOf<String>()
+        habits.forEach{habit->
+            val dates=store.completionDates(habit.id,30)
+            lines+=habit.name
+            lines+=if(dates.isEmpty())"  No completions in the last 30 days" else dates.take(10).joinToString(", "){d->try{f.format(SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(d)!!)}catch(_:Exception){d}}
+        }
+        AlertDialog.Builder(this).setTitle("Habit history • 30 days").setMessage(lines.joinToString("\n")).setPositiveButton("OK",null).show()
     }
     private fun showAbout(){AlertDialog.Builder(this).setTitle("Veyra").setMessage("Build your universe.\n\nVersion 1.1\nPersonal life tracking with habits, goals, mood, journal, stats, XP and achievements.\n\nYour data stays on this device unless you choose to export a backup.").setPositiveButton("OK",null).show()}
     private fun manageHabits(){
