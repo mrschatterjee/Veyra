@@ -23,8 +23,9 @@ import android.widget.TimePicker
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
-import java.util.Random
+import java.util.Calendar
 import java.util.Locale
+import java.util.Random
 
 class MainActivity : Activity() {
     private val handler=Handler(Looper.getMainLooper())
@@ -49,14 +50,22 @@ class MainActivity : Activity() {
     private fun showHabitHistory(){
         val habits=store.habits()
         if(habits.isEmpty()){AlertDialog.Builder(this).setTitle("Habit history").setMessage("Add a habit first to build completion history.").setPositiveButton("OK",null).show();return}
+        val date=Calendar.getInstance()
         val f=SimpleDateFormat("EEE, d MMM",Locale.getDefault())
         val lines=mutableListOf<String>()
         habits.forEach{habit->
-            val dates=store.completionDates(habit.id,30)
-            lines+=habit.name
-            lines+=if(dates.isEmpty())"  No completions in the last 30 days" else dates.take(10).joinToString(", "){d->try{f.format(SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(d)!!)}catch(_:Exception){d}}
+            lines+="${habit.name}"
+            val days=mutableListOf<String>()
+            repeat(14){
+                val key=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(date.time)
+                days+="${if(store.isCompleted(habit.id,key))"✓" else "—"} ${f.format(date.time)}"
+                date.add(Calendar.DAY_OF_YEAR,-1)
+            }
+            lines+=days.chunked(2).map{it.joinToString("    ")}.map{"  $it"}
+            date.timeInMillis=Calendar.getInstance().timeInMillis
+            lines+=""
         }
-        AlertDialog.Builder(this).setTitle("Habit history • 30 days").setMessage(lines.joinToString("\n")).setPositiveButton("OK",null).show()
+        AlertDialog.Builder(this).setTitle("Habit history • 14 days").setMessage(lines.joinToString("\n")).setPositiveButton("OK",null).show()
     }
     private fun showAbout(){AlertDialog.Builder(this).setTitle("Veyra").setMessage("Build your universe.\n\nVersion 1.1\nPersonal life tracking with habits, goals, mood, journal, stats, XP and achievements.\n\nYour data stays on this device unless you choose to export a backup.").setPositiveButton("OK",null).show()}
     private fun manageHabits(){
