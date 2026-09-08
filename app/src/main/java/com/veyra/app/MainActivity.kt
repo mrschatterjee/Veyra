@@ -37,9 +37,10 @@ class MainActivity : Activity() {
     override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this))}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){val input=EditText(this).apply{this.hint=hint;setSingleLine(false);minLines=2};AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save"){_,_->input.text.toString().trim().takeIf{it.isNotEmpty()}?.let(onSave)}.show()}
     fun showSettings(){
-        val labels=arrayOf("Daily reminder","Manage habits","Backup data","Restore backup","Reset Veyra data")
-        AlertDialog.Builder(this).setTitle("Veyra settings").setItems(labels){_,which->when(which){0->reminderDialog();1->manageHabits();2->createBackupFile();3->openBackupFile();4->confirmReset()}}.show()
+        val labels=arrayOf("Daily reminder","Manage habits","Backup data","Restore backup","About Veyra • v1.1","Reset Veyra data")
+        AlertDialog.Builder(this).setTitle("Veyra settings").setItems(labels){_,which->when(which){0->reminderDialog();1->manageHabits();2->createBackupFile();3->openBackupFile();4->showAbout();5->confirmReset()}}.show()
     }
+    private fun showAbout(){AlertDialog.Builder(this).setTitle("Veyra").setMessage("Build your universe.\n\nVersion 1.1\nPersonal life tracking with habits, goals, mood, journal, stats, XP and achievements.\n\nYour data stays on this device unless you choose to export a backup.").setPositiveButton("OK",null).show()}
     private fun manageHabits(){
         val habits=store.habits()
         if(habits.isEmpty()){AlertDialog.Builder(this).setTitle("Manage habits").setMessage("You have no habits yet. Add one from the Habits tab.").setPositiveButton("OK",null).show();return}
