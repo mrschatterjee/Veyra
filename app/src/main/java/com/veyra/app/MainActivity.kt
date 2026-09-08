@@ -13,7 +13,6 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -30,6 +29,9 @@ class MainActivity : Activity() {
     private val store by lazy { VeyraStore(this) }
     private val createBackup=100
     private val openBackup=101
+    private val notificationPermission=900
+    private var pendingReminderHour=20
+    private var pendingReminderMinute=0
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){setContentView(VeyraHomeView(this))})}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);super.onDestroy()}
     override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this))}
@@ -38,7 +40,17 @@ class MainActivity : Activity() {
         val labels=arrayOf("Daily reminder","Backup data","Restore backup","Reset Veyra data")
         AlertDialog.Builder(this).setTitle("Veyra settings").setItems(labels){_,which->when(which){0->reminderDialog();1->createBackupFile();2->openBackupFile();3->confirmReset()}}.show()
     }
-    private fun reminderDialog(){val picker=TimePicker(this).apply{setIs24HourView(true);hour=VeyraReminder.hour(this@MainActivity);minute=VeyraReminder.minute(this@MainActivity)};AlertDialog.Builder(this).setTitle("Daily reminder").setView(picker).setNegativeButton("Turn off"){_,_->VeyraReminder.set(this,false)}.setPositiveButton(if(VeyraReminder.isEnabled(this))"Update" else "Enable"){_,_->if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),900);VeyraReminder.set(this,true,picker.hour,picker.minute)}.show()}
+    private fun reminderDialog(){
+        val picker=TimePicker(this).apply{setIs24HourView(true);hour=VeyraReminder.hour(this@MainActivity);minute=VeyraReminder.minute(this@MainActivity)}
+        AlertDialog.Builder(this).setTitle("Daily reminder").setView(picker)
+            .setNegativeButton("Turn off"){_,_->VeyraReminder.set(this,false)}
+            .setPositiveButton(if(VeyraReminder.isEnabled(this))"Update" else "Enable"){_,_->enableReminder(picker.hour,picker.minute)}.show()
+    }
+    private fun enableReminder(hour:Int,minute:Int){
+        pendingReminderHour=hour;pendingReminderMinute=minute
+        if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),notificationPermission)}else{VeyraReminder.set(this,true,hour,minute)}
+    }
+    override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==notificationPermission){if(grantResults.firstOrNull()==PackageManager.PERMISSION_GRANTED){VeyraReminder.set(this,true,pendingReminderHour,pendingReminderMinute)}else{VeyraReminder.set(this,false);showRestartMessage("Notifications are disabled, so Veyra's daily reminder was not enabled. You can allow notifications in Android Settings and try again.")}}}
     private fun createBackupFile(){startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)}
     private fun openBackupFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="application/json";addCategory(Intent.CATEGORY_OPENABLE)},openBackup)}
     @Deprecated("Legacy activity result API is used for broad Android compatibility")
