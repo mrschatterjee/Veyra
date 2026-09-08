@@ -21,6 +21,7 @@ class VeyraStore(context: Context) {
     fun setCompleted(id:Long,done:Boolean,date:String=today())=prefs.edit().putBoolean("done_${date}_$id",done).apply()
     fun completionDates(id:Long,days:Int):List<String>{val r=mutableListOf<String>();val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);val c=Calendar.getInstance();repeat(days.coerceAtLeast(0)){r+=f.format(c.time);c.add(Calendar.DAY_OF_YEAR,-1)};return r.filter{isCompleted(id,it)}}
     fun streak(ids:List<Long>):Int{if(ids.isEmpty())return 0;val c=Calendar.getInstance();val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);var n=0;while(ids.all{isCompleted(it,f.format(c.time))}){n++;c.add(Calendar.DAY_OF_YEAR,-1)};return n}
+    fun bestStreak(ids:List<Long>,days:Int=365):Int{if(ids.isEmpty()||days<=0)return 0;val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);val c=Calendar.getInstance();var best=0;var current=0;repeat(days){if(ids.all{isCompleted(it,f.format(c.time))}){current++;best=maxOf(best,current)}else current=0;c.add(Calendar.DAY_OF_YEAR,-1)};return best}
     fun completedCount(days:Int,ids:List<Long>):Int{if(ids.isEmpty())return 0;val f=SimpleDateFormat("yyyy-MM-dd",Locale.US);val c=Calendar.getInstance();var n=0;repeat(days.coerceAtLeast(0)){val d=f.format(c.time);n+=ids.count{isCompleted(it,d)};c.add(Calendar.DAY_OF_YEAR,-1)};return n}
     fun mood():Int=prefs.getInt("mood",2).coerceIn(0,3);fun setMood(v:Int)=prefs.edit().putInt("mood",v.coerceIn(0,3)).apply()
     fun xp():Int=prefs.getInt("xp",0).coerceAtLeast(0);fun setXp(v:Int)=prefs.edit().putInt("xp",v.coerceAtLeast(0)).apply()
