@@ -7,9 +7,106 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 import java.util.Locale
 
-class NudgeConfigView(private val activity:MainActivity, private val nudge:Nudge):VeyraGlassPage(activity){
- private val store=NudgeStore(activity);private var interval=nudge.intervalMinutes;private var enabled=nudge.enabled
- override fun onDraw(c:Canvas)=page(c){cc,w,h->base(cc,"Nudge Settings",nudge.name,w,h);glass(cc,16f,94f,w-16f,230f,72);paint.textAlign=Paint.Align.CENTER;paint.typeface=Typeface.DEFAULT_BOLD;paint.textSize=13f;paint.color=Color.argb(205,235,225,255);cc.drawText("REPEAT EVERY",w/2,124f,paint);paint.textSize=38f;paint.color=Color.WHITE;paint.setShadowLayer(10f,0f,0f,Color.argb(170,165,75,255));cc.drawText(label(interval),w/2,176f,paint);paint.clearShadowLayer();paint.textAlign=Paint.Align.LEFT;button(cc,"−",24f,248f,132f,300f);button(cc,"+",w-132f,248f,w-24f,300f);button(cc,if(enabled)"TURN OFF" else "TURN ON",22f,324f,w/2-6,374f);button(cc,"SAVE",w/2+6,324f,w-22f,374f);paint.textAlign=Paint.Align.CENTER;paint.textSize=10.5f;paint.color=Color.argb(165,230,220,250);cc.drawText("Veyra will nudge you repeatedly while this is enabled.",w/2,408f,paint);paint.textAlign=Paint.Align.LEFT}
- private fun label(m:Int)=when{m<60->"$m MIN";m%60==0->if(m/60==1)"1 HOUR" else "${m/60} HOURS";else->String.format(Locale.US,"%dH %dM",m/60,m%60)}
- override fun handleTap(e:MotionEvent):Boolean{if(e.action!=MotionEvent.ACTION_UP)return true;val x=e.x/density;val y=(e.y-topInset)/density;val w=width/density;when{y in 240f..306f&&x<w/2->interval=when{interval<=15->15;interval<=30->15;interval<=60->30;interval<=120->60;else->120};y in 240f..306f&&x>=w/2->interval=when{interval<30->30;interval<60->60;interval<120->120;interval<180->180;else->240};y in 318f..382f&&x<w/2->enabled=!enabled;y in 318f..382f&&x>=w/2->{store.save(nudge.copy(intervalMinutes=interval,enabled=enabled));activity.showNudges();return true}};invalidate();return true}
+class NudgeConfigView(private val activity: MainActivity, private val nudge: Nudge) : VeyraGlassPage(activity) {
+    private val store = NudgeStore(activity)
+    private var interval = nudge.intervalMinutes.coerceAtLeast(15)
+    private var startHour = nudge.startHour.coerceIn(0, 23)
+    private var endHour = nudge.endHour.coerceIn(0, 23)
+    private var enabled = nudge.enabled
+
+    override fun onDraw(c: Canvas) = page(c) { cc, w, h ->
+        base(cc, "Nudge Settings", nudge.name, w, h)
+        glass(cc, 16f, 94f, w - 16f, 232f, 72)
+        paint.textAlign = Paint.Align.CENTER
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.textSize = 12f
+        paint.color = Color.argb(205, 235, 225, 255)
+        cc.drawText("REPEAT EVERY", w / 2, 121f, paint)
+        paint.textSize = 34f
+        paint.color = Color.WHITE
+        paint.setShadowLayer(10f, 0f, 0f, Color.argb(170, 165, 75, 255))
+        cc.drawText(label(interval), w / 2, 172f, paint)
+        paint.clearShadowLayer()
+        paint.textSize = 10f
+        paint.typeface = Typeface.DEFAULT
+        paint.color = Color.argb(165, 230, 220, 250)
+        cc.drawText("during the active window", w / 2, 201f, paint)
+
+        button(cc, "−", 24f, 246f, 132f, 296f)
+        button(cc, "+", w - 132f, 246f, w - 24f, 296f)
+
+        glass(cc, 16f, 310f, w - 16f, 418f, 55)
+        paint.textAlign = Paint.Align.LEFT
+        paint.textSize = 10f
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.color = Color.argb(165, 235, 225, 255)
+        cc.drawText("ACTIVE WINDOW", 30f, 333f, paint)
+        paint.textSize = 17f
+        paint.color = Color.WHITE
+        cc.drawText("${clock(startHour)} – ${clock(endHour)}", 30f, 360f, paint)
+        paint.textSize = 10f
+        paint.typeface = Typeface.DEFAULT
+        paint.color = Color.argb(155, 230, 220, 250)
+        cc.drawText(if (startHour == endHour) "All day" else "No nudges outside this window", 30f, 388f, paint)
+        paint.textAlign = Paint.Align.CENTER
+        paint.typeface = Typeface.DEFAULT_BOLD
+        button(cc, "START −1H", 22f, 430f, w / 2f - 7f, 478f)
+        button(cc, "START +1H", w / 2f + 7f, 430f, w - 22f, 478f)
+        button(cc, "END −1H", 22f, 488f, w / 2f - 7f, 536f)
+        button(cc, "END +1H", w / 2f + 7f, 488f, w - 22f, 536f)
+        button(cc, if (enabled) "TURN OFF" else "TURN ON", 22f, 550f, w / 2f - 7f, 600f)
+        button(cc, "SAVE", w / 2f + 7f, 550f, w - 22f, 600f)
+        paint.textSize = 10f
+        paint.typeface = Typeface.DEFAULT
+        paint.color = Color.argb(165, 230, 220, 250)
+        cc.drawText("Start = end means all-day nudges.", w / 2, 626f, paint)
+        paint.textAlign = Paint.Align.LEFT
+    }
+
+    private fun label(m: Int) = when {
+        m < 60 -> "$m MIN"
+        m % 60 == 0 -> if (m / 60 == 1) "1 HOUR" else "${m / 60} HOURS"
+        else -> String.format(Locale.US, "%dH %dM", m / 60, m % 60)
+    }
+
+    private fun clock(hour: Int): String {
+        val h = hour % 12
+        return String.format(Locale.US, "%02d:00 %s", if (h == 0) 12 else h, if (hour >= 12) "PM" else "AM")
+    }
+
+    override fun handleTap(e: MotionEvent): Boolean {
+        if (e.action != MotionEvent.ACTION_UP) return true
+        val x = e.x / density
+        val y = (e.y - topInset) / density
+        val w = width / density
+        when {
+            y in 238f..304f && x < w / 2 -> interval = when {
+                interval <= 15 -> 15
+                interval <= 30 -> 15
+                interval <= 60 -> 30
+                interval <= 120 -> 60
+                interval <= 180 -> 120
+                else -> 180
+            }
+            y in 238f..304f && x >= w / 2 -> interval = when {
+                interval < 30 -> 30
+                interval < 60 -> 60
+                interval < 120 -> 120
+                interval < 180 -> 180
+                else -> 240
+            }
+            y in 424f..484f && x < w / 2 -> startHour = (startHour + 23) % 24
+            y in 424f..484f && x >= w / 2 -> startHour = (startHour + 1) % 24
+            y in 484f..542f && x < w / 2 -> endHour = (endHour + 23) % 24
+            y in 484f..542f && x >= w / 2 -> endHour = (endHour + 1) % 24
+            y in 544f..608f && x < w / 2 -> enabled = !enabled
+            y in 544f..608f && x >= w / 2 -> {
+                store.save(nudge.copy(intervalMinutes = interval, startHour = startHour, endHour = endHour, enabled = enabled))
+                activity.showNudges()
+                return true
+            }
+        }
+        invalidate()
+        return true
+    }
 }
