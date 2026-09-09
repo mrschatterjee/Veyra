@@ -34,9 +34,9 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){afterOpening()});requestNotificationPermission()}
     private fun afterOpening(){if(VeyraAuth.currentUser()!=null){scope.launch{runCatching{VeyraCloudSync.signInSync(this@MainActivity)};showHome()}}else showLogin()}
-    private fun showLogin(){val view=LoginView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    fun showLogin(){val view=LoginView(this);setContentView(view);VeyraMotion.enter(view,18f)}
     fun continueOffline(){showHome()}
-    fun signInWithGoogle(done:(Boolean,String)->Unit){scope.launch{try{VeyraAuth.signInWithGoogle(this@MainActivity);val sync=VeyraCloudSync.signInSync(this@MainActivity);done(true,sync);showHome()}catch(e:Exception){VeyraAuth.signOut();done(false,e.message?:"Google sign-in failed.")}}}
+    fun signInWithGoogle(done:(Boolean,String)->Unit){scope.launch{try{VeyraAuth.signInWithGoogle(this@MainActivity);val sync=VeyraCloudSync.signInSync(this@MainActivity);done(true,sync);showHome()}catch(e:Exception){VeyraAuth.signOut(this@MainActivity);done(false,e.message?:"Google sign-in failed.")}}}
     private fun requestNotificationPermission(){if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),notificationPermission)}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);scope.cancel();super.onDestroy()}
     override fun onStop(){super.onStop();if(VeyraAuth.currentUser()!=null)scope.launch{runCatching{VeyraCloudSync.upload(this@MainActivity)}}}
@@ -44,7 +44,8 @@ class MainActivity : Activity() {
     fun textInput(title:String,hint:String,onSave:(String)->Unit){VeyraGlassDialog.showInput(this,title,hint,onSave=onSave)}
     private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
     fun showSettings(){val view=SettingsView(this){showHome()};setContentView(view);VeyraMotion.enter(view,22f)}
-    fun settingsAction(which:Int){when(which){0->showReminderPage();1->showNudges();2->showHabitsPage();3->showHabitHistory();4->showAchievements();5->createBackupFile();6->openBackupFile();7->showAbout();8->confirmReset()}}
+    fun settingsAction(which:Int){when(which){0->showReminderPage();1->showNudges();2->showHabitsPage();3->showHabitHistory();4->showAchievements();5->createBackupFile();6->openBackupFile();7->showAbout();8->confirmReset();9->showAccount()}}
+    fun showAccount(){val view=AccountView(this);setContentView(view);VeyraMotion.enter(view,18f)}
     fun showNudges(){val view=NudgesView(this);setContentView(view);VeyraMotion.enter(view,18f)}
     fun showNudgeConfig(n:Nudge){val view=NudgeConfigView(this,n);setContentView(view);VeyraMotion.enter(view,18f)}
     private fun showHabitsPage(){val view=ManageHabitsView(this);setContentView(view);VeyraMotion.enter(view,18f)}
