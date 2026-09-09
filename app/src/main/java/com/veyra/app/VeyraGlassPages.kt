@@ -57,7 +57,6 @@ abstract class VeyraGlassPage(private val activity: MainActivity) : View(activit
         c.drawCircle(w * 0.92f, h * 0.18f, w * 0.25f, paint)
         paint.color = Color.argb(42, 100, 80, 255)
         c.drawCircle(w * 0.08f, h * 0.86f, w * 0.30f, paint)
-
         paint.textAlign = Paint.Align.LEFT
         paint.typeface = Typeface.create("sans", Typeface.BOLD)
         paint.textSize = 26f
@@ -153,7 +152,8 @@ class HabitHistoryView(private val activity: MainActivity) : VeyraGlassPage(acti
                 paint.color = Color.argb(190, 225, 215, 255)
                 cc.drawText("${store.completionDates(habit.id, 14).size} / 14 completed", 30f, y + 50f, paint)
 
-                val date = Calendar.getInstance()
+                // Show the 14-day timeline in chronological order: oldest on the left, today on the right.
+                val date = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -13) }
                 for (i in 0 until 14) {
                     val x = 31f + i * ((w - 62f) / 13f)
                     val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date.time)
@@ -173,7 +173,7 @@ class HabitHistoryView(private val activity: MainActivity) : VeyraGlassPage(acti
                     paint.textSize = 6.5f
                     cc.drawText(dayName.format(date.time), x, y + 102f, paint)
                     paint.textAlign = Paint.Align.LEFT
-                    date.add(Calendar.DAY_OF_YEAR, -1)
+                    date.add(Calendar.DAY_OF_YEAR, 1)
                 }
                 y += cardH + 10f
             }
