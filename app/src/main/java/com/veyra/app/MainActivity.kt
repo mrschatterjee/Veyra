@@ -10,14 +10,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.MotionEvent
-import android.view.View
 import android.widget.EditText
 import android.widget.TimePicker
 import java.io.BufferedReader
@@ -86,11 +83,9 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setTitle("Daily reminder").setMessage(if(enabled)"Reminder is on. Choose a time to update it."else"Choose a daily time for your Veyra reminder.").setView(picker).setNegativeButton(if(enabled)"Turn off" else "Cancel"){_,_->if(enabled)VeyraReminder.set(this,false)}.setPositiveButton("Save"){_,_->pendingReminderHour=picker.hour;pendingReminderMinute=picker.minute;if(checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED&&android.os.Build.VERSION.SDK_INT>=33){requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),notificationPermission)}else VeyraReminder.set(this,true,pendingReminderHour,pendingReminderMinute)}.show()
     }
     override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==notificationPermission&&grantResults.firstOrNull()==PackageManager.PERMISSION_GRANTED)VeyraReminder.set(this,true,pendingReminderHour,pendingReminderMinute)}
-    private fun createBackupFile(){
-        startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)
-    }
+    private fun createBackupFile(){startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)}
     private fun openBackupFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="application/json";addCategory(Intent.CATEGORY_OPENABLE)},openBackup)}
-    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportBackup().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();AlertDialog.Builder(this).setTitle("Restore backup?").setMessage("This replaces your current Veyra data with the selected backup.").setNegativeButton("Cancel",null).setPositiveButton("Restore"){_,_->try{store.importBackup(json);refreshHome();AlertDialog.Builder(this).setTitle("Restore complete").setMessage("Your Veyra data has been restored.").setPositiveButton("OK",null).show()}catch(e:Exception){AlertDialog.Builder(this).setTitle("Restore failed").setMessage(e.message?:("The backup could not be restored.")).setPositiveButton("OK",null).show()}}.show()}}
+    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportJson().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();AlertDialog.Builder(this).setTitle("Restore backup?").setMessage("This replaces your current Veyra data with the selected backup.").setNegativeButton("Cancel",null).setPositiveButton("Restore"){_,_->try{store.importJson(json);refreshHome();AlertDialog.Builder(this).setTitle("Restore complete").setMessage("Your Veyra data has been restored.").setPositiveButton("OK",null).show()}catch(e:Exception){AlertDialog.Builder(this).setTitle("Restore failed").setMessage(e.message?:("The backup could not be restored.")).setPositiveButton("OK",null).show()}}.show()}}
     }
     private fun confirmReset(){AlertDialog.Builder(this).setTitle("Reset Veyra?").setMessage("All habits, progress, goals, mood, journal entries and achievements will be removed from this device.").setNegativeButton("Cancel",null).setPositiveButton("Reset"){_,_->store.reset();VeyraReminder.set(this,false);refreshHome()}.show()}
 
