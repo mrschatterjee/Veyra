@@ -2,6 +2,7 @@ package com.veyra.app
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.MotionEvent
 import java.util.Locale
