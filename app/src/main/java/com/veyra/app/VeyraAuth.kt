@@ -1,6 +1,7 @@
 package com.veyra.app
 
 import android.app.Activity
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -40,5 +41,8 @@ object VeyraAuth {
         error("The selected credential was not a Google account.")
     }
 
-    fun signOut() = auth?.signOut()
+    suspend fun signOut(activity: Activity) {
+        auth?.signOut()
+        runCatching { CredentialManager.create(activity).clearCredentialState(ClearCredentialStateRequest()) }
+    }
 }
