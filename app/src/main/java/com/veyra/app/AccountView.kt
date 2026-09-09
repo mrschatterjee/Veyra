@@ -5,10 +5,13 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.MotionEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class AccountView(private val activity: MainActivity) : VeyraGlassPage(activity) {
     private val user get() = VeyraAuth.currentUser()
+    private val scope = CoroutineScope(Dispatchers.Main)
     private var busy = false
 
     override fun onDraw(c: Canvas) = page(c) { cc, w, h ->
@@ -42,7 +45,7 @@ class AccountView(private val activity: MainActivity) : VeyraGlassPage(activity)
         if (y in 326f..404f && x in 18f..w - 18f && user != null) {
             busy = true
             invalidate()
-            activity.accountScope.launch {
+            scope.launch {
                 VeyraAuth.signOut(activity)
                 busy = false
                 activity.showLogin()
