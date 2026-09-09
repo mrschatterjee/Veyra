@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-private abstract class VeyraGlassPage(private val activity: MainActivity) : View(activity) {
+abstract class VeyraGlassPage(private val activity: MainActivity) : View(activity) {
     protected val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     protected val bgStars = listOf(0.08f to 0.12f,0.18f to 0.33f,0.31f to 0.08f,0.47f to 0.25f,0.63f to 0.11f,0.78f to 0.29f,0.9f to 0.08f,0.14f to 0.74f,0.38f to 0.88f,0.66f to 0.7f,0.84f to 0.9f)
     protected fun base(c: Canvas, title: String, subtitle: String) {
@@ -58,7 +58,7 @@ class ReminderView(private val activity: MainActivity) : VeyraGlassPage(activity
         glass(c,20f,310f,width-20f,430f,45);paint.textAlign=Paint.Align.LEFT;paint.textSize=15f;paint.typeface=Typeface.DEFAULT_BOLD;paint.color=Color.WHITE;c.drawText("Minute",40f,342f,paint);button(c,"− 5",38f,360f,140f,400f);button(c,"+ 5",width-140f,360f,width-38f,400f)
         button(c,if(enabled)"TURN OFF" else "TURN ON",30f,455f,width/2f-8f,505f);button(c,"SAVE REMINDER",width/2f+8f,455f,width-30f,505f)
         paint.textAlign=Paint.Align.CENTER;paint.textSize=12f;paint.typeface=Typeface.DEFAULT;paint.color=Color.argb(145,230,220,250);c.drawText("Veyra will gently remind you to take one small action.",width/2f,540f,paint);paint.textAlign=Paint.Align.LEFT}
-    override fun handleTap(e:MotionEvent):Boolean{val x=e.x;val y=e.y;if(e.action!=MotionEvent.ACTION_UP)return true;when{y in 245f..290f&&x<width/2f->hour=(hour+23)%24;y in 245f..290f&&x>=width/2f->hour=(hour+1)%24;y in 360f..405f&&x<width/2f->minute=(minute+55)%60;y in 360f..405f&&x>=width/2f->minute=(minute+5)%60;y in 450f..515f&&x<width/2f-> {enabled=!enabled;invalidate()};y in 450f..515f&&x>=width/2f->{if(enabled)store.set(activity,true,hour,minute) else store.set(activity,false);activity.showSettings()}};invalidate();return true}
+    override fun handleTap(e:MotionEvent):Boolean{val x=e.x;val y=e.y;if(e.action!=MotionEvent.ACTION_UP)return true;when{y in 245f..290f&&x<width/2f->hour=(hour+23)%24;y in 245f..290f&&x>=width/2f->hour=(hour+1)%24;y in 360f..405f&&x<width/2f->minute=(minute+55)%60;y in 360f..405f&&x>=width/2f->minute=(minute+5)%60;y in 450f..515f&&x<width/2f->{enabled=!enabled;invalidate()};y in 450f..515f&&x>=width/2f->{if(enabled)store.set(activity,true,hour,minute) else store.set(activity,false);activity.showSettings()}};invalidate();return true}
 }
 
 class ManageHabitsView(private val activity: MainActivity) : VeyraGlassPage(activity) {
