@@ -13,10 +13,12 @@ class NudgeStore(private val context: Context) {
         (0 until a.length()).map { i -> val x=a.getJSONObject(i); Nudge(x.getLong("id"),x.getString("name"),x.getInt("interval"),x.getInt("start"),x.getInt("end"),x.optBoolean("enabled",true)) }
     }.getOrDefault(emptyList())
     fun save(n: Nudge) {
-        val a=JSONArray(); (all().filterNot{it.id==n.id}+n).forEach{a.put(JSONObject().apply{put("id",it.id);put("name",it.name);put("interval",it.intervalMinutes);put("start",it.startHour);put("end",it.endHour);put("enabled",it.enabled)})}
+        val clean=n.copy(name=n.name.trim(),intervalMinutes=n.intervalMinutes.coerceAtLeast(15),startHour=n.startHour.coerceIn(0,23),endHour=n.endHour.coerceIn(0,23))
+        val a=JSONArray(); (all().filterNot{it.id==clean.id}+clean).forEach{a.put(JSONObject().apply{put("id",it.id);put("name",it.name);put("interval",it.intervalMinutes);put("start",it.startHour);put("end",it.endHour);put("enabled",it.enabled)})}
         prefs.edit().putString("items",a.toString()).apply()
-        if(n.enabled) NudgeScheduler.schedule(context,n) else NudgeScheduler.cancel(context,n.id)
+        if(clean.enabled) NudgeScheduler.schedule(context,clean) else NudgeScheduler.cancel(context,clean.id)
     }
     fun remove(id:Long){NudgeScheduler.cancel(context,id);val a=JSONArray();all().filterNot{it.id==id}.forEach{a.put(JSONObject().apply{put("id",it.id);put("name",it.name);put("interval",it.intervalMinutes);put("start",it.startHour);put("end",it.endHour);put("enabled",it.enabled)})};prefs.edit().putString("items",a.toString()).apply()}
+    fun clear(){all().forEach{NudgeScheduler.cancel(context,it.id)};prefs.edit().clear().apply()}
     fun nextId()=(all().maxOfOrNull{it.id}?:0L)+1L
 }
