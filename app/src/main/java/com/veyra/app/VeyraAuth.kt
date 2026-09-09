@@ -1,13 +1,14 @@
 package com.veyra.app
 
 import android.app.Activity
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
+import kotlinx.coroutines.tasks.await
 
 object VeyraAuth {
     private val auth: FirebaseAuth? by lazy { runCatching { FirebaseAuth.getInstance() }.getOrNull() }
@@ -20,10 +21,7 @@ object VeyraAuth {
         val resourceId = activity.resources.getIdentifier("default_web_client_id", "string", activity.packageName)
         if (resourceId == 0) error("Firebase Google sign-in is not configured yet.")
         val clientId = activity.getString(resourceId)
-        val option = GetGoogleIdOption.Builder()
-            .setServerClientId(clientId)
-            .setFilterByAuthorizedAccounts(false)
-            .build()
+        val option = GetGoogleIdOption.Builder().setServerClientId(clientId).setFilterByAuthorizedAccounts(false).build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         val result = CredentialManager.create(activity).getCredential(activity, request)
         val credential = result.credential
@@ -35,7 +33,5 @@ object VeyraAuth {
         error("The selected credential was not a Google account.")
     }
 
-    fun signOut() {
-        auth?.signOut()
-    }
+    fun signOut() = auth?.signOut()
 }
