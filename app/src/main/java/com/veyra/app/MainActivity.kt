@@ -25,11 +25,13 @@ class MainActivity : Activity() {
     private var pendingReminderHour=20; private var pendingReminderMinute=0
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){showHome()})}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);super.onDestroy()}
-    override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this))}
+    override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this));NudgeScheduler.rescheduleAll(this)}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){VeyraGlassDialog.showInput(this,title,hint,onSave=onSave)}
     private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
     fun showSettings(){val view=SettingsView(this){showHome()};setContentView(view);VeyraMotion.enter(view,22f)}
-    fun settingsAction(which:Int){when(which){0->showReminderPage();1->showHabitsPage();2->showHabitHistory();3->showAchievements();4->createBackupFile();5->openBackupFile();6->showAbout();7->confirmReset()}}
+    fun settingsAction(which:Int){when(which){0->showReminderPage();1->showNudges();2->showHabitsPage();3->showHabitHistory();4->showAchievements();5->createBackupFile();6->openBackupFile();7->showAbout();8->confirmReset()}}
+    fun showNudges(){val view=NudgesView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    fun showNudgeConfig(n:Nudge){val view=NudgeConfigView(this,n);setContentView(view);VeyraMotion.enter(view,18f)}
     private fun showHabitsPage(){val view=ManageHabitsView(this);setContentView(view);VeyraMotion.enter(view,18f)}
     fun addHabitFromPage(){textInput("Add a habit","e.g. Sleep"){name->val next=(store.habits().maxOfOrNull{it.id}?:0L)+1L;store.setHabits(store.habits()+VeyraStore.HabitRecord(next,name));showHabitsPage()}}
     fun habitActionsFromPage(id:Long){habitActions(id)}
