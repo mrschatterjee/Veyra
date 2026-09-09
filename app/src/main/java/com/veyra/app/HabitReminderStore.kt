@@ -17,13 +17,22 @@ class HabitReminderStore(private val context: Context) {
     }.getOrDefault(emptyList())
     fun get(habitId: Long): HabitReminder? = all().firstOrNull { it.habitId == habitId }
     fun save(item: HabitReminder) {
-        val list = all().filterNot { it.habitId == item.habitId } + item.copy(habitName = item.habitName.trim())
-        prefs.edit().putString("items", JSONArray().apply { list.forEach { put(JSONObject().apply { put("habitId", it.habitId); put("habitName", it.habitName); put("hour", it.hour.coerceIn(0,23)); put("minute", it.minute.coerceIn(0,59)); put("enabled", it.enabled) }) } }.toString()).apply()
-        if (item.enabled) HabitReminderScheduler.schedule(context, item) else HabitReminderScheduler.cancel(context, item.habitId)
+        val clean = item.copy(habitName = item.habitName.trim(), hour = item.hour.coerceIn(0,23), minute = item.minute.coerceIn(0,59))
+        val list = all().filterNot { it.habitId == clean.habitId } + clean
+        write(list)
+        if (clean.enabled) HabitReminderScheduler.schedule(context, clean) else HabitReminderScheduler.cancel(context, clean.habitId)
     }
     fun remove(habitId: Long) {
-        val list = all().filterNot { it.habitId == habitId }
-        prefs.edit().putString("items", JSONArray().apply { list.forEach { put(JSONObject().apply { put("habitId", it.habitId); put("habitName", it.habitName); put("hour", it.hour); put("minute", it.minute); put("enabled", it.enabled) }) } }.toString()).apply()
         HabitReminderScheduler.cancel(context, habitId)
+        write(all().filterNot { it.habitId == habitId })
+    }
+    fun clear() {
+        all().forEach { HabitReminderScheduler.cancel(context, it.habitId) }
+        prefs.edit().clear().apply()
+    }
+    private fun write(list: List<HabitReminder>) {
+        prefs.edit().putString("items", JSONArray().apply {
+            list.forEach { put(JSONObject().apply { put("habitId", it.habitId); put("habitName", it.habitName); put("hour", it.hour); put("minute", it.minute); put("enabled", it.enabled) }) }
+        }.toString()).apply()
     }
 }
