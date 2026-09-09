@@ -84,20 +84,20 @@ class SettingsView(private val activity: MainActivity, private val onBack: () ->
         c.drawPath(p, paint)
         paint.style = Paint.Style.FILL
 
-        text(c, "‹", 22f, 43f, 34f, 240)
-        text(c, "Settings", 58f, 39f, 24f, 255, true)
-        text(c, "Shape Veyra around the way you live.", 22f, 68f, 12f, 180)
+        text(c, "‹", 18f, 48f, 36f, 245)
+        text(c, "Settings", 54f, 43f, 27f, 255, true)
+        text(c, "Shape Veyra around the way you live.", 20f, 73f, 12.5f, 195)
 
-        val top = 92f
-        val rowH = 69f
+        val top = 94f
+        val rowH = 73f
         rows.forEachIndexed { i, pair ->
             val y = top + i * rowH
-            glass(c, 18f, y, w - 18f, y + 61f)
-            text(c, pair.first, 32f, y + 25f, 14f, 255, true)
-            text(c, pair.second.take(60), 32f, y + 46f, 9f, 155)
-            text(c, "›", w - 42f, y + 36f, 22f, 170)
+            glass(c, 16f, y, w - 16f, y + 65f)
+            text(c, pair.first, 30f, y + 27f, 15.5f, 255, true)
+            text(c, pair.second.take(60), 30f, y + 49f, 10.5f, 175)
+            text(c, "›", w - 40f, y + 39f, 24f, 180)
         }
-        text(c, "Your data stays on this device unless you export a backup.", 22f, contentH - 27f, 9f, 130)
+        text(c, "Your data stays on this device unless you export a backup.", 20f, contentH - 27f, 10f, 140)
         c.restore()
     }
 
@@ -107,12 +107,12 @@ class SettingsView(private val activity: MainActivity, private val onBack: () ->
         val y = (e.y - topInset) / density
         val w = width / density
         val h = (height - topInset - bottomInset) / density
-        if ((x < 70f && y < 75f) || y > h - 58f) {
+        if ((x < 70f && y < 80f) || y > h - 58f) {
             onBack()
             return true
         }
-        val index = ((y - 92f) / 69f).toInt()
-        if (index in rows.indices && y >= 86f && y < 92f + rows.size * 69f) {
+        val index = ((y - 94f) / 73f).toInt()
+        if (index in rows.indices && y >= 88f && y < 94f + rows.size * 73f) {
             activity.settingsAction(index)
         }
         return true
