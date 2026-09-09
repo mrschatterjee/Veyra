@@ -12,20 +12,15 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "veyra_reminders"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(NotificationChannel(channelId, "Veyra reminders", NotificationManager.IMPORTANCE_DEFAULT))
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(NotificationChannel(channelId, "Veyra reminders", NotificationManager.IMPORTANCE_DEFAULT))
+        val id = intent?.getLongExtra("habit_id", -1L) ?: -1L
+        val task = intent?.getStringExtra("habit_name").orEmpty().ifBlank { "Take one small action" }
+        val hour = intent?.getIntExtra("hour", 20) ?: 20
+        val minute = intent?.getIntExtra("minute", 0) ?: 0
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val task = VeyraReminder.habitName(context).ifBlank { "Take one small action" }
-        val title = if (VeyraReminder.habitName(context).isBlank()) "Build your universe." else "Time for $task"
-        val body = if (VeyraReminder.habitName(context).isBlank()) "Your Veyra reminder is ready." else "Your $task habit is scheduled now."
         val n = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) android.app.Notification.Builder(context, channelId) else android.app.Notification.Builder(context)
-        n.setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setContentIntent(open)
-            .setAutoCancel(true)
-        manager.notify(1001, n.build())
-        if (VeyraReminder.isEnabled(context)) VeyraReminder.schedule(context, VeyraReminder.hour(context), VeyraReminder.minute(context))
+        n.setSmallIcon(android.R.drawable.ic_popup_reminder).setContentTitle("Time for $task").setContentText("Your $task habit is scheduled now.").setContentIntent(open).setAutoCancel(true)
+        manager.notify(1001 + (id % 10000).toInt().coerceAtLeast(0), n.build())
+        if (id >= 0L) HabitReminderScheduler.schedule(context, HabitReminder(id, task, hour, minute, true))
     }
 }
