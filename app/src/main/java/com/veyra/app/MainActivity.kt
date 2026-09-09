@@ -39,44 +39,20 @@ class MainActivity : Activity() {
     fun textInput(title:String,hint:String,onSave:(String)->Unit){val input=EditText(this).apply{this.hint=hint;setSingleLine(false);minLines=2};AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save"){_,_->input.text.toString().trim().takeIf{it.isNotEmpty()}?.let(onSave)}.show()}
     private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
     fun showSettings(){val view=SettingsView(this){showHome()};setContentView(view);VeyraMotion.enter(view,22f)}
-    fun settingsAction(which:Int){when(which){0->reminderDialog();1->manageHabits();2->showHabitHistory();3->showAchievements();4->createBackupFile();5->openBackupFile();6->showAbout();7->confirmReset()}}
-    private fun showAchievements(){
-        val items=store.achievements().map{if(it.unlocked)"✓ ${it.title}\n${it.description}" else "○ ${it.title}\n${it.description}"}.toTypedArray()
-        AlertDialog.Builder(this).setTitle("Achievements").setItems(items,null).setPositiveButton("OK",null).show()
-    }
-    private fun showHabitHistory(){
-        val habits=store.habits()
-        if(habits.isEmpty()){AlertDialog.Builder(this).setTitle("Habit history").setMessage("Add a habit first to build completion history.").setPositiveButton("OK",null).show();return}
-        val date=Calendar.getInstance()
-        val f=SimpleDateFormat("EEE, d MMM",Locale.getDefault())
-        val lines=mutableListOf<String>()
-        habits.forEach{habit->
-            lines+="${habit.name}"
-            val days=mutableListOf<String>()
-            repeat(14){
-                val key=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(date.time)
-                days+="${if(store.isCompleted(habit.id,key))"✓" else "—"} ${f.format(date.time)}"
-                date.add(Calendar.DAY_OF_YEAR,-1)
-            }
-            lines+=days.chunked(2).map{it.joinToString("    ")}.map{"  $it"}
-            date.timeInMillis=Calendar.getInstance().timeInMillis
-            lines+=""
-        }
-        AlertDialog.Builder(this).setTitle("Habit history • 14 days").setMessage(lines.joinToString("\n")).setPositiveButton("OK",null).show()
-    }
-    private fun showAbout(){AlertDialog.Builder(this).setTitle("Veyra").setMessage("Build your universe.\n\nVersion 1.2\nPersonal life tracking with habits, goals, mood, journal, stats, XP and achievements.\n\nYour data stays on this device unless you choose to export a backup.").setPositiveButton("OK",null).show()}
-    private fun manageHabits(){
-        val habits=store.habits()
-        if(habits.isEmpty()){AlertDialog.Builder(this).setTitle("Manage habits").setMessage("You have no habits yet. Add one from the Habits tab.").setPositiveButton("OK",null).show();return}
-        AlertDialog.Builder(this).setTitle("Manage habits").setItems(habits.map{"${it.name}\nTap to edit or delete"}.toTypedArray()){_,index->habitActions(habits[index].id)}.show()
-    }
+    fun settingsAction(which:Int){when(which){0->showReminderPage();1->showHabitsPage();2->showHabitHistory();3->showAchievements();4->createBackupFile();5->openBackupFile();6->showAbout();7->confirmReset()}}
+    private fun showHabitsPage(){val view=ManageHabitsView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    fun addHabitFromPage(){textInput("Add a habit","e.g. Read 10 minutes"){name->val next=(store.habits().maxOfOrNull{it.id}?:0L)+1L;store.setHabits(store.habits()+VeyraStore.HabitRecord(next,name));showHabitsPage()}}
+    fun habitActionsFromPage(id:Long){habitActions(id)}
     private fun habitActions(id:Long){
         val habit=store.habits().firstOrNull{it.id==id}?:return
         AlertDialog.Builder(this).setTitle(habit.name).setItems(arrayOf("Rename","Delete")){_,which->if(which==0)renameHabit(habit)else deleteHabit(habit)}.show()
     }
-    private fun renameHabit(habit:VeyraStore.HabitRecord){textInput("Rename habit",habit.name){store.renameHabit(habit.id,it);refreshHome()}}
-    private fun deleteHabit(habit:VeyraStore.HabitRecord){AlertDialog.Builder(this).setTitle("Delete habit?").setMessage("This removes the habit from Veyra.").setNegativeButton("Cancel",null).setPositiveButton("Delete"){_,_->store.removeHabit(habit.id);refreshHome()}.show()}
-    private fun refreshHome(){showHome()}
+    private fun renameHabit(habit:VeyraStore.HabitRecord){textInput("Rename habit",habit.name){store.renameHabit(habit.id,it);showHabitsPage()}}
+    private fun deleteHabit(habit:VeyraStore.HabitRecord){AlertDialog.Builder(this).setTitle("Delete habit?").setMessage("This removes the habit from Veyra.").setNegativeButton("Cancel",null).setPositiveButton("Delete"){_,_->store.removeHabit(habit.id);showHabitsPage()}.show()}
+    private fun showAchievements(){val view=AchievementsView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    private fun showHabitHistory(){val view=HabitHistoryView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    private fun showReminderPage(){val view=ReminderView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    private fun showAbout(){AlertDialog.Builder(this).setTitle("Veyra").setMessage("Build your universe.\n\nVersion 1.2\nPersonal life tracking with habits, goals, mood, journal, stats, XP and achievements.\n\nYour data stays on this device unless you choose to export a backup.").setPositiveButton("OK",null).show()}
     private fun reminderDialog(){
         val enabled=VeyraReminder.isEnabled(this)
         val picker=TimePicker(this).apply{setIs24HourView(false);hour=VeyraReminder.hour(this@MainActivity);minute=VeyraReminder.minute(this@MainActivity)}
@@ -85,9 +61,9 @@ class MainActivity : Activity() {
     override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==notificationPermission&&grantResults.firstOrNull()==PackageManager.PERMISSION_GRANTED)VeyraReminder.set(this,true,pendingReminderHour,pendingReminderMinute)}
     private fun createBackupFile(){startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)}
     private fun openBackupFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="application/json";addCategory(Intent.CATEGORY_OPENABLE)},openBackup)}
-    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportJson().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();AlertDialog.Builder(this).setTitle("Restore backup?").setMessage("This replaces your current Veyra data with the selected backup.").setNegativeButton("Cancel",null).setPositiveButton("Restore"){_,_->try{store.importJson(json);refreshHome();AlertDialog.Builder(this).setTitle("Restore complete").setMessage("Your Veyra data has been restored.").setPositiveButton("OK",null).show()}catch(e:Exception){AlertDialog.Builder(this).setTitle("Restore failed").setMessage(e.message?:("The backup could not be restored.")).setPositiveButton("OK",null).show()}}.show()}}
+    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportJson().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();AlertDialog.Builder(this).setTitle("Restore backup?").setMessage("This replaces your current Veyra data with the selected backup.").setNegativeButton("Cancel",null).setPositiveButton("Restore"){_,_->try{store.importJson(json);showHome();AlertDialog.Builder(this).setTitle("Restore complete").setMessage("Your Veyra data has been restored.").setPositiveButton("OK",null).show()}catch(e:Exception){AlertDialog.Builder(this).setTitle("Restore failed").setMessage(e.message?:("The backup could not be restored.")).setPositiveButton("OK",null).show()}}.show()}}
     }
-    private fun confirmReset(){AlertDialog.Builder(this).setTitle("Reset Veyra?").setMessage("All habits, progress, goals, mood, journal entries and achievements will be removed from this device.").setNegativeButton("Cancel",null).setPositiveButton("Reset"){_,_->store.reset();VeyraReminder.set(this,false);refreshHome()}.show()}
+    private fun confirmReset(){AlertDialog.Builder(this).setTitle("Reset Veyra?").setMessage("All habits, progress, goals, mood, journal entries and achievements will be removed from this device.").setNegativeButton("Cancel",null).setPositiveButton("Reset"){_,_->store.reset();VeyraReminder.set(this,false);showHome()}.show()}
 
     private class OpeningView(context:Context,val done:()->Unit):View(context){
         private val paint=Paint(Paint.ANTI_ALIAS_FLAG);private val stars=List(70){Random(it*19L+4L).nextFloat() to Random(it*37L+9L).nextFloat()};private val handler=Handler(Looper.getMainLooper());private var phase=0
