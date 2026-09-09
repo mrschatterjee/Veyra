@@ -4,54 +4,63 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Calendar
+
+data class HabitReminder(val habitId: Long, val habitName: String, val hour: Int, val minute: Int, val enabled: Boolean)
 
 object VeyraReminder {
     private const val PREFS = "veyra_reminders"
-    private const val ENABLED = "enabled"
-    private const val HOUR = "hour"
-    private const val MINUTE = "minute"
-    private const val HABIT_ID = "habit_id"
-    private const val HABIT_NAME = "habit_name"
-    private const val REQUEST_CODE = 1001
+    private const val ITEMS = "items"
+    private const val BASE_REQUEST = 1001
 
-    fun isEnabled(context: Context): Boolean = prefs(context).getBoolean(ENABLED, false)
-    fun hour(context: Context): Int = prefs(context).getInt(HOUR, 20)
-    fun minute(context: Context): Int = prefs(context).getInt(MINUTE, 0)
-    fun habitId(context: Context): Long = prefs(context).getLong(HABIT_ID, -1L)
-    fun habitName(context: Context): String = prefs(context).getString(HABIT_NAME, "") ?: ""
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    fun all(context: Context): List<HabitReminder> = runCatching {
+        val a = JSONArray(prefs(context).getString(ITEMS, "[]"))
+        (0 until a.length()).map { i -> val o=a.getJSONObject(i); HabitReminder(o.getLong("habitId"),o.getString("habitName"),o.getInt("hour"),o.getInt("minute"),o.optBoolean("enabled",true)) }
+    }.getOrDefault(emptyList())
+    fun forHabit(context: Context, habitId: Long): HabitReminder? = all(context).firstOrNull { it.habitId == habitId }
+    fun isEnabled(context: Context): Boolean = all(context).any { it.enabled }
+    fun hour(context: Context): Int = all(context).firstOrNull { it.enabled }?.hour ?: 20
+    fun minute(context: Context): Int = all(context).firstOrNull { it.enabled }?.minute ?: 0
+    fun habitId(context: Context): Long = all(context).firstOrNull { it.enabled }?.habitId ?: -1L
+    fun habitName(context: Context): String = all(context).firstOrNull { it.enabled }?.habitName ?: ""
 
-    fun set(context: Context, enabled: Boolean, hour: Int = hour(context), minute: Int = minute(context), habitId: Long = this.habitId(context), habitName: String = this.habitName(context)) {
-        prefs(context).edit()
-            .putBoolean(ENABLED, enabled)
-            .putInt(HOUR, hour.coerceIn(0,23))
-            .putInt(MINUTE, minute.coerceIn(0,59))
-            .putLong(HABIT_ID, habitId)
-            .putString(HABIT_NAME, habitName.trim())
-            .apply()
-        if (enabled) schedule(context, hour, minute) else cancel(context)
+    fun set(context: Context, enabled: Boolean, hour: Int, minute: Int, habitId: Long, habitName: String) {
+        val items = all(context).filterNot { it.habitId == habitId }.toMutableList()
+        if (enabled) items += HabitReminder(habitId, habitName.trim(), hour.coerceIn(0,23), minute.coerceIn(0,59), true)
+        write(context, items)
+        cancel(context, habitId)
+        if (enabled) schedule(context, items.last())
     }
 
+    fun setLegacy(context: Context, enabled: Boolean, hour: Int = hour(context), minute: Int = minute(context)) = set(context, enabled, hour, minute, habitId(context), habitName(context).ifBlank { "Veyra" })
+
     fun schedule(context: Context, hour: Int, minute: Int) {
+        val existing = all(context).firstOrNull { it.enabled }
+        if (existing != null) schedule(context, existing.copy(hour=hour,minute=minute))
+    }
+
+    fun schedule(context: Context, reminder: HabitReminder) {
         val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val next = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour.coerceIn(0,23))
-            set(Calendar.MINUTE, minute.coerceIn(0,59))
+            set(Calendar.HOUR_OF_DAY, reminder.hour)
+            set(Calendar.MINUTE, reminder.minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
             if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
         }
-        alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next.timeInMillis, pendingIntent(context))
+        alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next.timeInMillis, pendingIntent(context, reminder.habitId))
     }
 
-    fun cancel(context: Context) {
-        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pendingIntent(context))
-    }
+    fun rescheduleAll(context: Context) { all(context).filter { it.enabled }.forEach { schedule(context,it) } }
+    fun cancel(context: Context, habitId: Long) { (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pendingIntent(context,habitId)) }
+    fun cancel(context: Context) { all(context).forEach { cancel(context,it.habitId) } }
 
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    private fun pendingIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
-        context, REQUEST_CODE,
-        Intent(context, ReminderReceiver::class.java),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
+    private fun write(context: Context, items: List<HabitReminder>) {
+        val a=JSONArray();items.forEach{a.put(JSONObject().put("habitId",it.habitId).put("habitName",it.habitName).put("hour",it.hour).put("minute",it.minute).put("enabled",it.enabled))}
+        prefs(context).edit().putString(ITEMS,a.toString()).apply()
+    }
+    private fun pendingIntent(context: Context, habitId: Long): PendingIntent = PendingIntent.getBroadcast(context, BASE_REQUEST+(habitId%100000).toInt(), Intent(context, ReminderReceiver::class.java).putExtra("habit_id",habitId), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 }
