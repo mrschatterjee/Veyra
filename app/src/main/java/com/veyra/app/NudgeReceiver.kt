@@ -11,11 +11,11 @@ import android.os.Build
 
 class NudgeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val name = intent.getStringExtra("name") ?: "Nudge"
-        val id = intent.getLongExtra("id", 0L)
-        val interval = intent.getIntExtra("interval", 60)
-        val start = intent.getIntExtra("start", 8)
-        val end = intent.getIntExtra("end", 22)
+        val id = intent.getLongExtra("id", -1L)
+        if (id < 0L) return
+        val saved = NudgeStore(context).all().firstOrNull { it.id == id }
+        if (saved == null || !saved.enabled) return
+
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= 26) {
             manager.createNotificationChannel(
@@ -31,13 +31,15 @@ class NudgeReceiver : BroadcastReceiver() {
             }
             val notification = builder
                 .setSmallIcon(R.drawable.ic_launcher)
-                .setContentTitle(name)
+                .setContentTitle(saved.name)
                 .setContentText("A small nudge from Veyra.")
                 .setAutoCancel(true)
                 .setContentIntent(PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
                 .build()
             manager.notify(50000 + (id % 10000).toInt(), notification)
         }
-        NudgeScheduler.schedule(context, Nudge(id, name, interval, start, end, true))
+
+        // Re-read the saved record so edits made after the previous alarm take effect.
+        NudgeScheduler.schedule(context, saved)
     }
 }
