@@ -16,17 +16,30 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Random
 
 class MainActivity : Activity() {
-    private val handler=Handler(Looper.getMainLooper()); private val store by lazy { VeyraStore(this) }
+    private val handler=Handler(Looper.getMainLooper())
+    private val store by lazy { VeyraStore(this) }
+    private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val createBackup=100; private val openBackup=101; private val notificationPermission=900
-    private var pendingReminder: HabitReminder?=null
-    override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){showHome()});requestNotificationPermission()}
+    private var pendingReminder:HabitReminder?=null
+
+    override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){afterOpening()});requestNotificationPermission()}
+    private fun afterOpening(){if(VeyraAuth.currentUser()!=null){scope.launch{runCatching{VeyraCloudSync.signInSync(this@MainActivity)};showHome()}}else showLogin()}
+    private fun showLogin(){val view=LoginView(this);setContentView(view);VeyraMotion.enter(view,18f)}
+    fun continueOffline(){showHome()}
+    fun signInWithGoogle(done:(Boolean,String)->Unit){scope.launch{try{VeyraAuth.signInWithGoogle(this@MainActivity);val sync=VeyraCloudSync.signInSync(this@MainActivity);done(true,sync);showHome()}catch(e:Exception){VeyraAuth.signOut();done(false,e.message?:"Google sign-in failed.")}}}
     private fun requestNotificationPermission(){if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),notificationPermission)}
-    override fun onDestroy(){handler.removeCallbacksAndMessages(null);super.onDestroy()}
+    override fun onDestroy(){handler.removeCallbacksAndMessages(null);scope.cancel();super.onDestroy()}
+    override fun onStop(){super.onStop();if(VeyraAuth.currentUser()!=null)scope.launch{runCatching{VeyraCloudSync.upload(this@MainActivity)}}}
     override fun onResume(){super.onResume();HabitReminderScheduler.rescheduleAll(this);NudgeScheduler.rescheduleAll(this)}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){VeyraGlassDialog.showInput(this,title,hint,onSave=onSave)}
     private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
@@ -46,7 +59,7 @@ class MainActivity : Activity() {
     private fun showHabitHistory(){val view=HabitHistoryView(this);setContentView(view);VeyraMotion.enter(view,18f)}
     private fun showReminderPage(){val habit=store.habits().firstOrNull();if(habit!=null)showHabitReminder(habit.id)else{val view=ReminderView(this);setContentView(view);VeyraMotion.enter(view,18f)}}
     private fun showAbout(){VeyraGlassDialog.showInfo(this,"Veyra","Build your universe.\n\nVersion 1.4\nPersonal life tracking with habits, goals, mood, journal, stats and achievements.")}
-    override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==notificationPermission){val pending=pendingReminder;pendingReminder=null;if(pending!=null){if(grantResults.firstOrNull()==PackageManager.PERMISSION_GRANTED)HabitReminderStore(this).save(pending);else VeyraGlassDialog.showInfo(this,"Notifications are off","Veyra needs notification permission to send habit reminders. You can allow notifications later in Android Settings.")};if(pending!=null)showSettings()}}
+    override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==notificationPermission){val pending=pendingReminder;pendingReminder=null;if(pending!=null){if(grantResults.firstOrNull()==PackageManager.PERMISSION_GRANTED)HabitReminderStore(this).save(pending)else VeyraGlassDialog.showInfo(this,"Notifications are off","Veyra needs notification permission to send habit reminders. You can allow notifications later in Android Settings.")};if(pending!=null)showSettings()}}
     private fun createBackupFile(){startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)}
     private fun openBackupFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="application/json";addCategory(Intent.CATEGORY_OPENABLE)},openBackup)}
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportJson().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();VeyraGlassDialog.showConfirm(this,"Restore backup?","This replaces your current Veyra data with the selected backup.","RESTORE"){try{store.importJson(json);showHome();VeyraGlassDialog.showInfo(this,"Restore complete","Your Veyra data has been restored successfully.")}catch(e:Exception){VeyraGlassDialog.showInfo(this,"Restore failed",e.message?:"The backup could not be restored.")}}}}}
