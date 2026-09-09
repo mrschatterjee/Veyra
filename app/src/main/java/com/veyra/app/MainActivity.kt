@@ -33,11 +33,12 @@ class MainActivity : Activity() {
     private val notificationPermission=900
     private var pendingReminderHour=20
     private var pendingReminderMinute=0
-    override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){setContentView(VeyraHomeView(this))})}
+    override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){showHome()})}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);super.onDestroy()}
     override fun onResume(){super.onResume();if(VeyraReminder.isEnabled(this))VeyraReminder.schedule(this,VeyraReminder.hour(this),VeyraReminder.minute(this))}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){val input=EditText(this).apply{this.hint=hint;setSingleLine(false);minLines=2};AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save"){_,_->input.text.toString().trim().takeIf{it.isNotEmpty()}?.let(onSave)}.show()}
-    fun showSettings(){setContentView(SettingsView(this){setContentView(VeyraHomeView(this))})}
+    private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
+    fun showSettings(){val view=SettingsView(this){showHome()};setContentView(view);VeyraMotion.enter(view,22f)}
     fun settingsAction(which:Int){when(which){0->reminderDialog();1->manageHabits();2->showHabitHistory();3->showAchievements();4->createBackupFile();5->openBackupFile();6->showAbout();7->confirmReset()}}
     private fun showAchievements(){
         val items=store.achievements().map{if(it.unlocked)"✓ ${it.title}\n${it.description}" else "○ ${it.title}\n${it.description}"}.toTypedArray()
@@ -75,7 +76,7 @@ class MainActivity : Activity() {
     }
     private fun renameHabit(habit:VeyraStore.HabitRecord){textInput("Rename habit",habit.name){store.renameHabit(habit.id,it);refreshHome()}}
     private fun deleteHabit(habit:VeyraStore.HabitRecord){AlertDialog.Builder(this).setTitle("Delete habit?").setMessage("This removes the habit from Veyra.").setNegativeButton("Cancel",null).setPositiveButton("Delete"){_,_->store.removeHabit(habit.id);refreshHome()}.show()}
-    private fun refreshHome(){setContentView(VeyraHomeView(this))}
+    private fun refreshHome(){showHome()}
     private fun reminderDialog(){
         val enabled=VeyraReminder.isEnabled(this)
         val picker=TimePicker(this).apply{setIs24HourView(false);hour=VeyraReminder.hour(this@MainActivity);minute=VeyraReminder.minute(this@MainActivity)}
