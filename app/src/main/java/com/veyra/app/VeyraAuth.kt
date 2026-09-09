@@ -1,6 +1,7 @@
 package com.veyra.app
 
 import android.app.Activity
+import android.util.Base64
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -9,6 +10,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import java.security.SecureRandom
 import kotlinx.coroutines.tasks.await
 
 object VeyraAuth {
@@ -24,9 +26,12 @@ object VeyraAuth {
         if (resourceId == 0) error("Firebase Google sign-in is not configured yet.")
         val clientId = activity.getString(resourceId)
         if (clientId.isBlank()) error("Firebase Google sign-in is not configured yet.")
+        val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE)
         val option = GetGoogleIdOption.Builder()
             .setServerClientId(clientId)
             .setFilterByAuthorizedAccounts(false)
+            .setNonce(nonce)
             .build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         val result = CredentialManager.create(activity).getCredential(activity, request)
