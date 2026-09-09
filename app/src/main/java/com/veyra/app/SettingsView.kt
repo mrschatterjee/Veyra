@@ -9,6 +9,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import kotlin.random.Random
 
 class SettingsView(private val activity: MainActivity, private val onBack: () -> Unit) : View(activity) {
@@ -25,6 +26,17 @@ class SettingsView(private val activity: MainActivity, private val onBack: () ->
         "About Veyra" to "Version 1.2 and information about the app.",
         "Reset Veyra data" to "Clear all locally stored Veyra progress."
     )
+    private var topInset = 0
+    private var bottomInset = 0
+
+    init {
+        setOnApplyWindowInsetsListener { _, insets ->
+            topInset = insets.getInsets(WindowInsets.Type.statusBars()).top
+            bottomInset = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            invalidate()
+            insets
+        }
+    }
 
     private fun text(c: Canvas, s: String, x: Float, y: Float, size: Float, alpha: Int = 255, bold: Boolean = false) {
         paint.shader = null
@@ -49,28 +61,30 @@ class SettingsView(private val activity: MainActivity, private val onBack: () ->
 
     override fun onDraw(c: Canvas) {
         val w = width / density
-        val h = height / density
+        val contentH = (height - topInset - bottomInset) / density
         c.save()
+        c.clipRect(0f, topInset.toFloat(), width.toFloat(), height - bottomInset.toFloat())
+        c.translate(0f, topInset.toFloat())
         c.scale(density, density)
-        paint.shader = LinearGradient(0f, 0f, w, h, Color.rgb(9, 5, 29), Color.rgb(65, 31, 122), Shader.TileMode.CLAMP)
-        c.drawRect(0f, 0f, w, h, paint)
+        paint.shader = LinearGradient(0f, 0f, w, contentH, Color.rgb(9, 5, 29), Color.rgb(65, 31, 122), Shader.TileMode.CLAMP)
+        c.drawRect(0f, 0f, w, contentH, paint)
         paint.shader = null
         paint.color = Color.argb(90, 185, 145, 255)
-        stars.forEach { (x, y) -> c.drawCircle(x * w, y * (h - 70f), if (x > .7f) 2f else 1.1f, paint) }
+        stars.forEach { (x, y) -> c.drawCircle(x * w, y * (contentH - 70f), if (x > .7f) 2f else 1.1f, paint) }
         paint.color = Color.argb(38, 190, 150, 255)
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 2f
         val p = Path()
-        p.moveTo(-20f, h * .30f)
-        p.cubicTo(w * .25f, h * .18f, w * .65f, h * .40f, w + 20f, h * .25f)
+        p.moveTo(-20f, contentH * .30f)
+        p.cubicTo(w * .25f, contentH * .18f, w * .65f, contentH * .40f, w + 20f, contentH * .25f)
         c.drawPath(p, paint)
         p.reset()
-        p.moveTo(-20f, h * .72f)
-        p.cubicTo(w * .28f, h * .58f, w * .65f, h * .85f, w + 20f, h * .68f)
+        p.moveTo(-20f, contentH * .72f)
+        p.cubicTo(w * .28f, contentH * .58f, w * .65f, contentH * .85f, w + 20f, contentH * .68f)
         c.drawPath(p, paint)
         paint.style = Paint.Style.FILL
 
-        text(c, "‹", 22f, 43f, 34f, 240, false)
+        text(c, "‹", 22f, 43f, 34f, 240)
         text(c, "Settings", 58f, 39f, 24f, 255, true)
         text(c, "Shape Veyra around the way you live.", 22f, 68f, 12f, 180)
 
@@ -83,16 +97,16 @@ class SettingsView(private val activity: MainActivity, private val onBack: () ->
             text(c, pair.second.take(60), 32f, y + 46f, 9f, 155)
             text(c, "›", w - 42f, y + 36f, 22f, 170)
         }
-        text(c, "Your data stays on this device unless you export a backup.", 22f, h - 27f, 9f, 130)
+        text(c, "Your data stays on this device unless you export a backup.", 22f, contentH - 27f, 9f, 130)
         c.restore()
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_UP) return true
         val x = e.x / density
-        val y = e.y / density
+        val y = (e.y - topInset) / density
         val w = width / density
-        val h = height / density
+        val h = (height - topInset - bottomInset) / density
         if ((x < 70f && y < 75f) || y > h - 58f) {
             onBack()
             return true
