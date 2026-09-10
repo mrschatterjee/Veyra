@@ -1,16 +1,12 @@
 package com.veyra.app
 
 import android.app.Activity
-import android.util.Base64
-import androidx.credentials.ClearCredentialStateRequest
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import android.content.Intent
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import java.security.SecureRandom
 import kotlinx.coroutines.tasks.await
 
 object VeyraAuth {
@@ -20,35 +16,37 @@ object VeyraAuth {
     fun isSignedIn(): Boolean = auth?.currentUser != null
     fun isConfigured(activity: Activity): Boolean = auth != null && activity.resources.getIdentifier("default_web_client_id", "string", activity.packageName) != 0
 
-    suspend fun signInWithGoogle(activity: Activity): FirebaseUser {
-        val firebaseAuth = auth ?: error("Firebase is not configured yet.")
+    private fun googleClientId(activity: Activity): String {
         val resourceId = activity.resources.getIdentifier("default_web_client_id", "string", activity.packageName)
         if (resourceId == 0) error("Firebase Google sign-in is not configured yet.")
-        val clientId = activity.getString(resourceId)
-        if (clientId.isBlank()) error("Firebase Google sign-in is not configured yet.")
+        return activity.getString(resourceId).takeIf { it.isNotBlank() }
+            ?: error("Firebase Google sign-in is not configured yet.")
+    }
 
-        val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
-        val option = GetSignInWithGoogleOption.Builder(clientId)
-            .setNonce(nonce)
+    private fun googleOptions(activity: Activity): GoogleSignInOptions =
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(googleClientId(activity))
+            .requestEmail()
+            .requestProfile()
             .build()
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(option)
-            .build()
-        val result = CredentialManager.create(activity).getCredential(activity, request)
-        val credential = result.credential
-        if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-            val google = GoogleIdTokenCredential.createFrom(credential.data)
-            val authResult = firebaseAuth.signInWithCredential(
-                com.google.firebase.auth.GoogleAuthProvider.getCredential(google.idToken, null)
-            ).await()
-            return authResult.user ?: error("Firebase did not return a user.")
-        }
-        error("The selected credential was not a Google account.")
+
+    fun googleSignInIntent(activity: Activity): Intent {
+        if (auth == null) error("Firebase is not configured yet.")
+        return GoogleSignIn.getClient(activity, googleOptions(activity)).signInIntent
+    }
+
+    suspend fun completeGoogleSignIn(activity: Activity, data: Intent?): FirebaseUser {
+        val firebaseAuth = auth ?: error("Firebase is not configured yet.")
+        val account = GoogleSignIn.getSignedInAccountFromIntent(data).await()
+        val idToken = account.idToken ?: error("Google did not return an ID token.")
+        val authResult = firebaseAuth.signInWithCredential(
+            com.google.firebase.auth.GoogleAuthProvider.getCredential(idToken, null)
+        ).await()
+        return authResult.user ?: error("Firebase did not return a user.")
     }
 
     suspend fun signOut(activity: Activity) {
         auth?.signOut()
-        runCatching { CredentialManager.create(activity).clearCredentialState(ClearCredentialStateRequest()) }
+        runCatching { GoogleSignIn.getClient(activity, googleOptions(activity)).signOut().await() }
     }
 }
