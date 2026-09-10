@@ -28,8 +28,9 @@ object VeyraAuth {
         if (clientId.isBlank()) error("Firebase Google sign-in is not configured yet.")
         val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE)
-        val option = GetGoogleIdOption.Builder(clientId)
+        val option = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(clientId)
             .setNonce(nonce)
             .build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
