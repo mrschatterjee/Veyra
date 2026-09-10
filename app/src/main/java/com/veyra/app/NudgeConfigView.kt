@@ -101,7 +101,12 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
             y in 484f..542f && x >= w / 2 -> endHour = (endHour + 1) % 24
             y in 544f..608f && x < w / 2 -> enabled = !enabled
             y in 544f..608f && x >= w / 2 -> {
-                store.save(nudge.copy(intervalMinutes = interval, startHour = startHour, endHour = endHour, enabled = enabled))
+                val updated = nudge.copy(intervalMinutes = interval, startHour = startHour, endHour = endHour, enabled = enabled)
+                store.save(updated)
+                // Saving a nudge immediately replaces its old alarm. Previously this
+                // relied on the Activity being resumed, which meant edits could leave
+                // the old schedule active until the next app restart.
+                NudgeScheduler.schedule(activity, updated)
                 activity.showNudges()
                 return true
             }
