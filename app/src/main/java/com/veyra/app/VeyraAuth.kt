@@ -6,9 +6,7 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -30,19 +28,18 @@ object VeyraAuth {
         if (clientId.isBlank()) error("Firebase Google sign-in is not configured yet.")
         val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE)
-        val manager = CredentialManager.create(activity)
-        val credential = try {
-            val option = GetGoogleIdOption.Builder().setServerClientId(clientId).setFilterByAuthorizedAccounts(false).setNonce(nonce).build()
-            val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-            manager.getCredential(activity, request).credential
-        } catch (_: NoCredentialException) {
-            val option = GetSignInWithGoogleOption.Builder().setServerClientId(clientId).setNonce(nonce).build()
-            val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-            manager.getCredential(activity, request).credential
-        }
+        val option = GetGoogleIdOption.Builder(clientId)
+            .setFilterByAuthorizedAccounts(false)
+            .setNonce(nonce)
+            .build()
+        val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+        val result = CredentialManager.create(activity).getCredential(activity, request)
+        val credential = result.credential
         if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             val google = GoogleIdTokenCredential.createFrom(credential.data)
-            val authResult = firebaseAuth.signInWithCredential(com.google.firebase.auth.GoogleAuthProvider.getCredential(google.idToken, null)).await()
+            val authResult = firebaseAuth.signInWithCredential(
+                com.google.firebase.auth.GoogleAuthProvider.getCredential(google.idToken, null)
+            ).await()
             return authResult.user ?: error("Firebase did not return a user.")
         }
         error("The selected credential was not a Google account.")
