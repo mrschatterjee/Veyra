@@ -1,9 +1,14 @@
 package com.veyra.app
 
+import android.app.AlarmManager
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.view.MotionEvent
 import java.util.Locale
 
@@ -59,7 +64,7 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
         paint.textSize = 10f
         paint.typeface = Typeface.DEFAULT
         paint.color = Color.argb(165, 230, 220, 250)
-        cc.drawText("Start = end means all-day nudges.", w / 2, 626f, paint)
+        cc.drawText("Nudges follow your phone's clock exactly when exact alarms are allowed.", w / 2, 626f, paint)
         paint.textAlign = Paint.Align.LEFT
     }
 
@@ -72,6 +77,26 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
     private fun clock(hour: Int): String {
         val h = hour % 12
         return String.format(Locale.US, "%02d:00 %s", if (h == 0) 12 else h, if (hour >= 12) "PM" else "AM")
+    }
+
+    private fun requestExactAlarmAccessIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val alarm = activity.getSystemService(AlarmManager::class.java)
+        if (alarm.canScheduleExactAlarms()) return
+        VeyraGlassDialog.showConfirm(
+            activity,
+            "Sync to your device clock?",
+            "Allow Veyra's Alarms & reminders access so nudges can fire on the exact clock schedule even while the phone is idle.",
+            "OPEN SETTINGS"
+        ) {
+            runCatching {
+                activity.startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.parse("package:${activity.packageName}")
+                    }
+                )
+            }
+        }
     }
 
     override fun handleTap(e: MotionEvent): Boolean {
@@ -103,10 +128,8 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
             y in 544f..608f && x >= w / 2 -> {
                 val updated = nudge.copy(intervalMinutes = interval, startHour = startHour, endHour = endHour, enabled = enabled)
                 store.save(updated)
-                // Saving a nudge immediately replaces its old alarm. Previously this
-                // relied on the Activity being resumed, which meant edits could leave
-                // the old schedule active until the next app restart.
                 NudgeScheduler.schedule(activity, updated)
+                if (updated.enabled) requestExactAlarmAccessIfNeeded()
                 activity.showNudges()
                 return true
             }
