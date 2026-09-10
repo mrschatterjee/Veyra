@@ -15,17 +15,20 @@ class ReminderReceiver : BroadcastReceiver() {
         val saved = if (id >= 0) HabitReminderStore(context).get(id) else null
         if (saved == null || !saved.enabled) return
 
-        // The alarm is one-shot, so always schedule its next occurrence even if
-        // notifications are currently blocked. This keeps the daily reminder alive.
-        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            HabitReminderScheduler.schedule(context, saved)
-            return
-        }
+        // Always re-arm the one-shot daily alarm, even if notifications are blocked.
+        HabitReminderScheduler.schedule(context, saved)
+
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) return
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "veyra_reminders"
+        val channelId = "veyra_reminders_v2"
         if (Build.VERSION.SDK_INT >= 26) {
-            manager.createNotificationChannel(NotificationChannel(channelId, "Veyra reminders", NotificationManager.IMPORTANCE_HIGH))
+            val channel = NotificationChannel(channelId, "Veyra Reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Scheduled habit reminders from Veyra"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 120, 250)
+            }
+            manager.createNotificationChannel(channel)
         }
         val open = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java),
@@ -37,6 +40,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 .setContentTitle("Time for ${saved.habitName}")
                 .setContentText("Your ${saved.habitName} habit is scheduled now.")
                 .setContentIntent(open)
+                .setCategory(android.app.Notification.CATEGORY_REMINDER)
                 .setAutoCancel(true)
                 .setPriority(android.app.Notification.PRIORITY_HIGH)
                 .build()
@@ -46,11 +50,11 @@ class ReminderReceiver : BroadcastReceiver() {
                 .setContentTitle("Time for ${saved.habitName}")
                 .setContentText("Your ${saved.habitName} habit is scheduled now.")
                 .setContentIntent(open)
+                .setCategory(android.app.Notification.CATEGORY_REMINDER)
                 .setAutoCancel(true)
                 .setPriority(android.app.Notification.PRIORITY_HIGH)
                 .build()
         }
         manager.notify(10000 + (id % 10000).toInt(), notification)
-        HabitReminderScheduler.schedule(context, saved)
     }
 }
