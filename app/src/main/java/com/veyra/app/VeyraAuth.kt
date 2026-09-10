@@ -6,7 +6,7 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -26,14 +26,15 @@ object VeyraAuth {
         if (resourceId == 0) error("Firebase Google sign-in is not configured yet.")
         val clientId = activity.getString(resourceId)
         if (clientId.isBlank()) error("Firebase Google sign-in is not configured yet.")
+
         val nonceBytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE)
-        val option = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(clientId)
+        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
+        val option = GetSignInWithGoogleOption.Builder(clientId)
             .setNonce(nonce)
             .build()
-        val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(option)
+            .build()
         val result = CredentialManager.create(activity).getCredential(activity, request)
         val credential = result.credential
         if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
