@@ -11,14 +11,15 @@ class BootReceiver : BroadcastReceiver() {
         when (intent?.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_LOCALE_CHANGED,
             AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                    (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms() ||
-                    intent.action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
-                ) {
-                    HabitReminderScheduler.rescheduleAll(context)
-                    NudgeScheduler.rescheduleAll(context)
-                }
+                // Recalculate from the phone's current wall clock and timezone.
+                // This prevents old epoch timestamps from surviving a manual time
+                // change, automatic network time correction, or timezone change.
+                HabitReminderScheduler.rescheduleAll(context)
+                NudgeScheduler.rescheduleAll(context)
             }
         }
     }
