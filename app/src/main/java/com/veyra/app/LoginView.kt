@@ -1,5 +1,6 @@
 package com.veyra.app
 
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -29,7 +30,6 @@ class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
         paint.color = Color.argb(165, 230, 220, 250)
         cc.drawText("Google sign-in uses Firebase Authentication.", w / 2f, 270f, paint)
         cc.drawText("Veyra never stores your Google password.", w / 2f, 290f, paint)
-
         button(cc, if (busy) "SIGNING IN…" else "CONTINUE WITH GOOGLE", 22f, 382f, w - 22f, 438f)
         button(cc, "CONTINUE OFFLINE", 22f, 452f, w - 22f, 508f)
         paint.textSize = 10.5f
@@ -43,10 +43,12 @@ class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
         busy = true
         message = "Opening Google sign-in…"
         invalidate()
-        activity.signInWithGoogle { success, result ->
+        try {
+            activity.startActivity(Intent(activity, GoogleSignInActivity::class.java))
+        } catch (e: Exception) {
             busy = false
-            message = result
-            if (!success) invalidate()
+            message = e.message ?: "Google sign-in could not be started."
+            invalidate()
         }
     }
 
