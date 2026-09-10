@@ -1,6 +1,5 @@
 package com.veyra.app
 
-import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -43,11 +42,9 @@ class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
         busy = true
         message = "Opening Google sign-in…"
         invalidate()
-        try {
-            activity.startActivity(Intent(activity, GoogleSignInActivity::class.java))
-        } catch (e: Exception) {
+        activity.signInWithGoogle { success, result ->
             busy = false
-            message = e.message ?: "Google sign-in could not be started."
+            message = if (success) "Signed in successfully." else result
             invalidate()
         }
     }
