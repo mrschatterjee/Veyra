@@ -12,7 +12,20 @@
           "package_name": "com.veyra.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "233775229321-emeev1154a62fbtlcloi7em5o5pgehvf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.veyra.app",
+            "certificate_hash": "b6a82c165aa4c57ed106d4e267d661267280ef6e"
+          }
+        },
+        {
+          "client_id": "233775229321-ebribplco51thtuq15klm540n4sbag3u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC411NOmYRZEP_qhaBRg5O4smAgfD4QPOg"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "233775229321-ebribplco51thtuq15klm540n4sbag3u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
