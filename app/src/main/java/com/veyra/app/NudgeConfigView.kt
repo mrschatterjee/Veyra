@@ -36,10 +36,8 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
         paint.typeface = Typeface.DEFAULT
         paint.color = Color.argb(165, 230, 220, 250)
         cc.drawText("during the active window", w / 2, 201f, paint)
-
         button(cc, "−", 24f, 246f, 132f, 296f)
         button(cc, "+", w - 132f, 246f, w - 24f, 296f)
-
         glass(cc, 16f, 310f, w - 16f, 418f, 55)
         paint.textAlign = Paint.Align.LEFT
         paint.textSize = 10f
@@ -64,77 +62,33 @@ class NudgeConfigView(private val activity: MainActivity, private val nudge: Nud
         paint.textSize = 10f
         paint.typeface = Typeface.DEFAULT
         paint.color = Color.argb(165, 230, 220, 250)
-        cc.drawText("Nudges follow your phone's clock exactly when exact alarms are allowed.", w / 2, 626f, paint)
+        cc.drawText("Veyra uses exact device-clock alarms and background protection settings.", w / 2, 626f, paint)
         paint.textAlign = Paint.Align.LEFT
     }
 
-    private fun label(m: Int) = when {
-        m < 60 -> "$m MIN"
-        m % 60 == 0 -> if (m / 60 == 1) "1 HOUR" else "${m / 60} HOURS"
-        else -> String.format(Locale.US, "%dH %dM", m / 60, m % 60)
-    }
-
-    private fun clock(hour: Int): String {
-        val h = hour % 12
-        return String.format(Locale.US, "%02d:00 %s", if (h == 0) 12 else h, if (hour >= 12) "PM" else "AM")
-    }
+    private fun label(m: Int) = when { m < 60 -> "$m MIN"; m % 60 == 0 -> if (m / 60 == 1) "1 HOUR" else "${m / 60} HOURS"; else -> String.format(Locale.US, "%dH %dM", m / 60, m % 60) }
+    private fun clock(hour: Int): String { val h = hour % 12; return String.format(Locale.US, "%02d:00 %s", if (h == 0) 12 else h, if (hour >= 12) "PM" else "AM") }
 
     private fun requestExactAlarmAccessIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
         val alarm = activity.getSystemService(AlarmManager::class.java)
         if (alarm.canScheduleExactAlarms()) return
-        VeyraGlassDialog.showConfirm(
-            activity,
-            "Sync to your device clock?",
-            "Allow Veyra's Alarms & reminders access so nudges can fire on the exact clock schedule even while the phone is idle.",
-            "OPEN SETTINGS"
-        ) {
-            runCatching {
-                activity.startActivity(
-                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                        data = Uri.parse("package:${activity.packageName}")
-                    }
-                )
-            }
-        }
+        VeyraGlassDialog.showConfirm(activity,"Sync to your device clock?","Allow Veyra's Alarms & reminders access so nudges can fire on the exact clock schedule even while the phone is idle.","OPEN SETTINGS") { runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply { data = Uri.parse("package:${activity.packageName}") }) } }
     }
 
     override fun handleTap(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_UP) return true
-        val x = e.x / density
-        val y = (e.y - topInset) / density
-        val w = width / density
+        val x=e.x/density; val y=(e.y-topInset)/density; val w=width/density
         when {
-            y in 238f..304f && x < w / 2 -> interval = when {
-                interval <= 15 -> 15
-                interval <= 30 -> 15
-                interval <= 60 -> 30
-                interval <= 120 -> 60
-                interval <= 180 -> 120
-                else -> 180
-            }
-            y in 238f..304f && x >= w / 2 -> interval = when {
-                interval < 30 -> 30
-                interval < 60 -> 60
-                interval < 120 -> 120
-                interval < 180 -> 180
-                else -> 240
-            }
-            y in 424f..484f && x < w / 2 -> startHour = (startHour + 23) % 24
-            y in 424f..484f && x >= w / 2 -> startHour = (startHour + 1) % 24
-            y in 484f..542f && x < w / 2 -> endHour = (endHour + 23) % 24
-            y in 484f..542f && x >= w / 2 -> endHour = (endHour + 1) % 24
-            y in 544f..608f && x < w / 2 -> enabled = !enabled
-            y in 544f..608f && x >= w / 2 -> {
-                val updated = nudge.copy(intervalMinutes = interval, startHour = startHour, endHour = endHour, enabled = enabled)
-                store.save(updated)
-                NudgeScheduler.schedule(activity, updated)
-                if (updated.enabled) requestExactAlarmAccessIfNeeded()
-                activity.showNudges()
-                return true
-            }
+            y in 238f..304f && x < w/2 -> interval=when{interval<=15->15;interval<=30->15;interval<=60->30;interval<=120->60;interval<=180->120;else->180}
+            y in 238f..304f && x >= w/2 -> interval=when{interval<30->30;interval<60->60;interval<120->120;interval<180->180;else->240}
+            y in 424f..484f && x < w/2 -> startHour=(startHour+23)%24
+            y in 424f..484f && x >= w/2 -> startHour=(startHour+1)%24
+            y in 484f..542f && x < w/2 -> endHour=(endHour+23)%24
+            y in 484f..542f && x >= w/2 -> endHour=(endHour+1)%24
+            y in 544f..608f && x < w/2 -> enabled=!enabled
+            y in 544f..608f && x >= w/2 -> { val updated=nudge.copy(intervalMinutes=interval,startHour=startHour,endHour=endHour,enabled=enabled);store.save(updated);NudgeScheduler.schedule(activity,updated);if(updated.enabled){requestExactAlarmAccessIfNeeded();NotificationReliability.promptIfNeeded(activity)};activity.showNudges();return true }
         }
-        invalidate()
-        return true
+        invalidate(); return true
     }
 }
