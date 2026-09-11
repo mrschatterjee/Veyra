@@ -5,50 +5,44 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.MotionEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class AccountView(private val activity: MainActivity) : VeyraGlassPage(activity) {
-    private val user get() = VeyraAuth.currentUser()
-    private val scope = CoroutineScope(Dispatchers.Main)
-    private var busy = false
+    private val store = VeyraStore(activity)
 
     override fun onDraw(c: Canvas) = page(c) { cc, w, h ->
-        base(cc, "Account", "Your Veyra identity and cloud connection.", w, h)
-        glass(cc, 16f, 100f, w - 16f, 310f, 72)
+        base(cc, "Profile", "Your name and personal Veyra identity.", w, h)
+        glass(cc, 16f, 100f, w - 16f, 330f, 72)
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textSize = 24f
+        paint.textSize = 25f
         paint.color = Color.WHITE
-        cc.drawText(user?.displayName?.takeIf { it.isNotBlank() } ?: "Veyra user", w / 2f, 155f, paint)
+        cc.drawText(store.userName().ifBlank { "Veyra user" }, w / 2f, 158f, paint)
         paint.textSize = 12f
         paint.typeface = Typeface.DEFAULT
         paint.color = Color.argb(195, 230, 220, 250)
-        cc.drawText(user?.email ?: "No account connected", w / 2f, 184f, paint)
+        cc.drawText("This name is saved locally on this device.", w / 2f, 193f, paint)
         paint.textSize = 10.5f
         paint.color = Color.argb(160, 230, 220, 250)
-        cc.drawText(if (user != null) "Google account connected" else "Offline mode", w / 2f, 222f, paint)
-        cc.drawText("Your Veyra data is associated with your Firebase user ID.", w / 2f, 250f, paint)
-        button(cc, if (busy) "SIGNING OUT…" else "SIGN OUT", 24f, 338f, w - 24f, 392f)
+        cc.drawText("It will be used throughout your Veyra experience.", w / 2f, 224f, paint)
+        button(cc, "CHANGE NAME", 24f, 275f, w - 24f, 331f)
         paint.textSize = 10f
         paint.color = Color.argb(150, 230, 220, 250)
-        cc.drawText("Signing out stops automatic cloud sync on this device.", w / 2f, 430f, paint)
+        cc.drawText("No Google account or password is required.", w / 2f, 380f, paint)
         paint.textAlign = Paint.Align.LEFT
     }
 
     override fun handleTap(e: MotionEvent): Boolean {
-        if (e.action != MotionEvent.ACTION_UP || busy) return true
+        if (e.action != MotionEvent.ACTION_UP) return true
         val x = e.x / density
         val y = (e.y - topInset) / density
         val w = width / density
-        if (y in 326f..404f && x in 18f..w - 18f && user != null) {
-            busy = true
-            invalidate()
-            scope.launch {
-                VeyraAuth.signOut(activity)
-                busy = false
-                activity.showLogin()
+        if (y in 264f..343f && x in 18f..w - 18f) {
+            activity.textInput("Change your name", "Enter your name") { value ->
+                val clean = value.trim().take(40)
+                if (clean.isNotBlank()) {
+                    store.setUserName(clean)
+                    invalidate()
+                }
             }
         }
         return true
