@@ -7,12 +7,11 @@ import android.graphics.Typeface
 import android.view.MotionEvent
 
 class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
-    private var busy = false
-    private var message = "Sign in to keep your Veyra universe synced across devices."
+    private var name = ""
 
     override fun onDraw(c: Canvas) = page(c) { cc, w, h ->
         base(cc, "Welcome to Veyra", "Build your universe.", w, h)
-        glass(cc, 16f, 110f, w - 16f, 350f, 72)
+        glass(cc, 16f, 110f, w - 16f, 390f, 72)
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.DEFAULT_BOLD
         paint.textSize = 30f
@@ -20,33 +19,36 @@ class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
         paint.setShadowLayer(12f, 0f, 0f, Color.argb(180, 165, 75, 255))
         cc.drawText("VEYRA", w / 2f, 165f, paint)
         paint.clearShadowLayer()
-        paint.textSize = 13f
+        paint.textSize = 15f
         paint.typeface = Typeface.DEFAULT
-        paint.color = Color.argb(220, 235, 225, 255)
-        cc.drawText("Your habits, goals and progress", w / 2f, 205f, paint)
-        cc.drawText("belong to your account.", w / 2f, 225f, paint)
+        paint.color = Color.argb(230, 240, 230, 255)
+        cc.drawText("What should we call you?", w / 2f, 225f, paint)
+        paint.textSize = 11f
+        paint.color = Color.argb(165, 230, 220, 250)
+        cc.drawText("Your name stays saved on this device", w / 2f, 255f, paint)
+        cc.drawText("and will be used throughout Veyra.", w / 2f, 273f, paint)
+        button(cc, if (name.isBlank()) "ENTER YOUR NAME" else name.take(24), 22f, 305f, w - 22f, 361f)
+        button(cc, "CONTINUE", 22f, 375f, w - 22f, 431f)
         paint.textSize = 10.5f
         paint.color = Color.argb(165, 230, 220, 250)
-        cc.drawText("Google sign-in uses Firebase Authentication.", w / 2f, 270f, paint)
-        cc.drawText("Veyra never stores your Google password.", w / 2f, 290f, paint)
-        button(cc, if (busy) "SIGNING IN…" else "CONTINUE WITH GOOGLE", 22f, 382f, w - 22f, 438f)
-        button(cc, "CONTINUE OFFLINE", 22f, 452f, w - 22f, 508f)
-        paint.textSize = 10.5f
-        paint.color = Color.argb(175, 230, 220, 250)
-        cc.drawText(message.take(76), w / 2f, 550f, paint)
+        cc.drawText("You can change your name later in Settings.", w / 2f, 470f, paint)
         paint.textAlign = Paint.Align.LEFT
     }
 
-    fun startGoogle() {
-        if (busy) return
-        busy = true
-        message = "Opening Google sign-in…"
-        invalidate()
-        activity.signInWithGoogle { success, result ->
-            busy = false
-            message = if (success) "Signed in successfully." else result
+    private fun editName() {
+        activity.textInput("Your name", "Enter your name") { value ->
+            name = value.trim().take(40)
             invalidate()
         }
+    }
+
+    private fun continueToApp() {
+        val clean = name.trim().take(40)
+        if (clean.isBlank()) {
+            editName()
+            return
+        }
+        activity.saveUserName(clean)
     }
 
     override fun handleTap(e: MotionEvent): Boolean {
@@ -55,8 +57,8 @@ class LoginView(private val activity: MainActivity) : VeyraGlassPage(activity) {
         val y = (e.y - topInset) / density
         val w = width / density
         when {
-            y in 374f..445f && x in 16f..w - 16f -> startGoogle()
-            y in 445f..518f && x in 16f..w - 16f -> activity.continueOffline()
+            y in 296f..368f && x in 16f..w - 16f -> editName()
+            y in 368f..442f && x in 16f..w - 16f -> continueToApp()
         }
         return true
     }
