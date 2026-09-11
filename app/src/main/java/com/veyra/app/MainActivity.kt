@@ -20,7 +20,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Random
@@ -33,15 +32,12 @@ class MainActivity : Activity() {
     private var pendingReminder:HabitReminder?=null
 
     override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);setContentView(OpeningView(this){afterOpening()});requestNotificationPermission()}
-    private fun afterOpening(){if(VeyraAuth.currentUser()!=null){scope.launch{runCatching{VeyraCloudSync.signInSync(this@MainActivity)};showHome()}}else showLogin()}
+    private fun afterOpening(){if(store.userName().isBlank())showLogin() else showHome()}
     fun showLogin(){val view=LoginView(this);setContentView(view);VeyraMotion.enter(view,18f)}
-    fun continueOffline(){showHome()}
-    fun signInWithGoogle(done:(Boolean,String)->Unit){scope.launch{try{VeyraAuth.signInWithGoogle(this@MainActivity);val sync=VeyraCloudSync.signInSync(this@MainActivity);done(true,sync);showHome()}catch(e:Exception){VeyraAuth.signOut(this@MainActivity);done(false,e.message?:"Google sign-in failed.")}}}
+    fun saveUserName(name:String){val clean=name.trim().take(40);if(clean.isBlank()){showLogin();return};store.setUserName(clean);showHome()}
+    fun continueOffline(){if(store.userName().isBlank())showLogin() else showHome()}
     private fun requestNotificationPermission(){if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),notificationPermission)}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);scope.cancel();super.onDestroy()}
-    override fun onStop(){super.onStop();if(VeyraAuth.currentUser()!=null)scope.launch{runCatching{VeyraCloudSync.upload(this@MainActivity)}}}
-    // Do not reschedule every time the Activity resumes: doing so resets nudge intervals
-    // whenever the user briefly leaves and returns to Veyra.
     override fun onResume(){super.onResume()}
     fun textInput(title:String,hint:String,onSave:(String)->Unit){VeyraGlassDialog.showInput(this,title,hint,onSave=onSave)}
     private fun showHome(){val view=VeyraHomeView(this);setContentView(view);VeyraMotion.enter(view)}
@@ -67,6 +63,6 @@ class MainActivity : Activity() {
     private fun createBackupFile(){startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{type="application/json";putExtra(Intent.EXTRA_TITLE,"veyra-backup.json")},createBackup)}
     private fun openBackupFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="application/json";addCategory(Intent.CATEGORY_OPENABLE)},openBackup)}
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data?.data==null)return;when(requestCode){createBackup->contentResolver.openOutputStream(data.data!!)?.use{it.write(store.exportJson().toByteArray())};openBackup->contentResolver.openInputStream(data.data!!)?.use{stream->val json=BufferedReader(InputStreamReader(stream)).readText();VeyraGlassDialog.showConfirm(this,"Restore backup?","This replaces your current Veyra data with the selected backup.","RESTORE"){try{store.importJson(json);showHome();VeyraGlassDialog.showInfo(this,"Restore complete","Your Veyra data has been restored successfully.")}catch(e:Exception){VeyraGlassDialog.showInfo(this,"Restore failed",e.message?:"The backup could not be restored.")}}}}}
-    private fun confirmReset(){VeyraGlassDialog.showConfirm(this,"Reset Veyra?","All habits, progress, goals, mood, journal entries and achievements will be removed from Veyra.","RESET"){store.reset();HabitReminderStore(this).clear();NudgeStore(this).clear();showHome()}}
+    private fun confirmReset(){VeyraGlassDialog.showConfirm(this,"Reset Veyra?","All habits, progress, goals, mood, journal entries and achievements will be removed from Veyra.","RESET"){store.reset();HabitReminderStore(this).clear();NudgeStore(this).clear();showLogin()}}
     private class OpeningView(context:Context,val done:()->Unit):View(context){private val paint=Paint(Paint.ANTI_ALIAS_FLAG);private val stars=List(70){Random(it*19L+4L).nextFloat() to Random(it*37L+9L).nextFloat()};private val handler=Handler(Looper.getMainLooper());private var phase=0;init{postDelayed({phase=1;invalidate()},900);postDelayed({phase=2;invalidate()},1800);postDelayed({done()},2700)};override fun onDetachedFromWindow(){handler.removeCallbacksAndMessages(null);super.onDetachedFromWindow()};override fun onDraw(c:Canvas){val w=width.toFloat();val h=height.toFloat();paint.shader=LinearGradient(0f,0f,w,h,Color.rgb(9,5,29),Color.rgb(65,31,122),Shader.TileMode.CLAMP);c.drawRect(0f,0f,w,h,paint);paint.shader=null;paint.color=Color.argb(110,200,170,255);stars.forEach{(x,y)->c.drawCircle(x*w,y*h,if(x>.7f)2.5f else 1.4f,paint)};paint.textAlign=Paint.Align.CENTER;paint.typeface=Typeface.create("sans",Typeface.BOLD);paint.color=Color.WHITE;paint.textSize=48f;val title=when(phase){0->"VEYRA";1->"GOOD MORNING";else->"BUILD YOUR UNIVERSE"};c.drawText(title,w/2f,h/2f,paint);paint.textSize=18f;paint.typeface=Typeface.create("sans",Typeface.NORMAL);paint.color=Color.argb(190,255,255,255);val sub=when(phase){0->"";1->"One small action at a time.";else->""};c.drawText(sub,w/2f,h/2f+34f,paint);paint.textAlign=Paint.Align.LEFT}}
 }
